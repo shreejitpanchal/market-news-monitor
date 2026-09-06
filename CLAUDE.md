@@ -12,16 +12,16 @@ no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
 **Current status: Phase 0 (scaffold) through Phase 4 (Claude
-classification) are written, plus the SEC filings, earnings-aware
-sensitivity, and pre-market digest slices of Phase 5** ("trading-specific
-depth" — only the home-screen widget is still unbuilt; see Roadmap
-below), plus a Settings export/import feature added ahead of its normal
-schedule because export/import needed somewhere to store the Claude and
-Finnhub API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar`
-isn't checked in (see Commands below), so no `./gradlew` command has
-actually been run against this code yet. Don't treat the roadmap
-checkboxes as "tested and working" until that first build/test run comes
-back clean.
+classification) are written, and Phase 5 ("trading-specific depth") is
+now fully built** (SEC filings, earnings-aware sensitivity, pre-market
+digest, home-screen widget — see Roadmap below), plus a Settings
+export/import feature added ahead of its normal schedule because
+export/import needed somewhere to store the Claude and Finnhub API keys.
+Only Phase 4's deferred dedup clustering remains anywhere on the roadmap.
+**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked
+in (see Commands below), so no `./gradlew` command has actually been run
+against this code yet. Don't treat the roadmap checkboxes as "tested and
+working" until that first build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -142,6 +142,32 @@ back clean.
   getWorkManagerConfiguration`) rather than one factory branching on
   worker type — adding a third scheduled job later means adding a third
   factory, not editing the existing two.
+- **The home-screen widget is built with Jetpack Glance**
+  (`androidx.glance:glance-appwidget`), not the older RemoteViews/
+  `AppWidgetProvider` API directly — a natural fit since the app is
+  already all-Compose. `MarketNewsMonitorWidgetReceiver` is the actual
+  `AppWidgetProvider` the OS binds to; `MarketNewsMonitorWidget` is the
+  Glance composable.
+- **Widget rows deep-link straight to that ticker's detail screen — a
+  deliberate exception to the no-deep-link notification decision above.**
+  A widget tap always finishes-and-recreates `MainActivity` (standard
+  launch mode + `FLAG_ACTIVITY_CLEAR_TOP`), so `onCreate` reliably sees
+  the tapped ticker via `intent.getStringExtra(MainActivity.
+  EXTRA_TICKER_SYMBOL)` with none of the re-entrant-Activity/`onNewIntent`
+  concerns Phase 3 was avoiding for notifications. That decision for
+  notifications stands unless revisited separately — don't assume this
+  widget mechanism was meant to change it.
+- **The widget stays fresh via one hook, not one per call site:**
+  `NewsRepository.refresh()` calls `WidgetUpdater.requestUpdate()` at the
+  end, unconditionally — every refresh path (manual ticker-detail,
+  background poll) updates it automatically. The `widgetUpdater`
+  constructor parameter defaults to `WidgetUpdater.Noop` specifically so
+  the dozen-plus existing test call sites didn't all need updating —
+  don't remove that default without checking what still relies on it.
+  `updatePeriodMillis` in the widget's provider XML is only a 30-minute
+  safety net for when background polling is off, same "acceptable drift"
+  reasoning as the digest scheduler — the `refresh()` hook is the real
+  mechanism.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -218,11 +244,11 @@ here as each phase actually lands:
 - [x] Phase 2 — live news feed (Finnhub + Google News RSS) (unverified — see Status above)
 - [x] Phase 3 — background alerts (WorkManager + notifications) (unverified — see Status above)
 - [x] Phase 4 — Claude integration (classification, urgency badges) (unverified — see Status above; dedup clustering deferred)
-- [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
+- [x] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget) (unverified — see Status above)
   - [x] SEC filings feed (EDGAR 8-K/Form 4 via the existing news registry) (unverified — see Status above)
   - [x] Earnings-calendar-aware alert sensitivity (unverified — see Status above; also added the missing baseline urgency gate)
   - [x] Pre-market digest notification (Claude Sonnet) (unverified — see Status above; fixed 8am, hot/warm-only, off by default)
-  - [ ] Home-screen widget
+  - [x] Home-screen widget (unverified — see Status above; Jetpack Glance, deep-links per row)
 
 ## Commands
 

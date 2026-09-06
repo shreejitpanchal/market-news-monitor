@@ -138,7 +138,19 @@ Each phase ships something actually usable, not just a milestone.
    `DelegatingWorkerFactory`), fires at a fixed 8:00 AM device-local time
    and asks Sonnet for a short summary of the whole watchlist's hot/warm
    news from the last 24h; skipped entirely when nothing's notable. Off
-   by default. Only the home-screen widget is still unbuilt.
+   by default.
+   **Shipped: the home-screen widget** — built with Jetpack Glance
+   (`androidx.glance:glance-appwidget`), mirroring the Dashboard's
+   symbol + urgency badge per ticker. Unlike notifications (which
+   deliberately don't deep-link, §1), tapping a widget row jumps straight
+   to that ticker's detail screen — a widget tap always freshly
+   recreates `MainActivity` (no `onNewIntent` re-entrancy to worry
+   about), so the deep-link mechanism this needed doesn't carry the risk
+   that made notifications skip it. `NewsRepository.refresh()` requests a
+   widget update at the end of every refresh, keeping it in sync without
+   a separate call site anywhere. All four pieces of this phase are now
+   built; the only thing still deferred anywhere on this roadmap is
+   item 5's dedup clustering, above.
 
 ## 5. Stretch ideas (not scheduled)
 

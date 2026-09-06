@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.compose.material.icons.core)
     implementation(libs.navigation.compose)
     implementation(libs.work.runtime.ktx)
+    implementation(libs.glance.appwidget)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)

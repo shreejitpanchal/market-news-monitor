@@ -19,6 +19,7 @@ import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
 import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
+import com.marketnewsmonitor.app.data.widget.HomeWidgetUpdater
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 import kotlinx.serialization.json.Json
@@ -75,7 +76,12 @@ class AppContainer(context: Context) {
 
     private val articleClassifier = ClaudeArticleClassifier(claudeApi) { secureSettingsStore.getClaudeApiKey() }
 
-    val newsRepository = NewsRepository(database.articleDao(), newsSourceRegistry, articleClassifier)
+    val newsRepository = NewsRepository(
+        database.articleDao(),
+        newsSourceRegistry,
+        articleClassifier,
+        HomeWidgetUpdater(context),
+    )
 
     val earningsCalendarProvider: EarningsCalendarProvider =
         FinnhubEarningsCalendarProvider(finnhubApi) { secureSettingsStore.getFinnhubApiKey() }

@@ -10,6 +10,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -32,10 +33,18 @@ enum class TopLevelDestination(val route: String, val label: String, val icon: I
 private const val TICKER_DETAIL_ROUTE = "ticker"
 
 @Composable
-fun MarketNewsMonitorNavHost() {
+fun MarketNewsMonitorNavHost(startTickerSymbol: String? = null) {
     val navController: NavHostController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val onTopLevelDestination = TopLevelDestination.entries.any { it.route == backStackEntry?.destination?.route }
+
+    // Widget-tap deep link (see MainActivity) — runs once; back still returns
+    // to the default Dashboard start destination underneath.
+    LaunchedEffect(startTickerSymbol) {
+        if (!startTickerSymbol.isNullOrBlank()) {
+            navController.navigate("$TICKER_DETAIL_ROUTE/$startTickerSymbol")
+        }
+    }
 
     Scaffold(
         bottomBar = { if (onTopLevelDestination) AppBottomBar(navController) },

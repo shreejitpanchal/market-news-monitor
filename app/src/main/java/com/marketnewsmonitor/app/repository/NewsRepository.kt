@@ -7,6 +7,7 @@ import com.marketnewsmonitor.app.data.local.entity.Urgency
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassifier
 import com.marketnewsmonitor.app.data.remote.claude.ClaudeArticleClassifier
+import com.marketnewsmonitor.app.data.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -14,6 +15,8 @@ class NewsRepository(
     private val articleDao: ArticleDao,
     private val registry: NewsSourceRegistry,
     private val classifier: ArticleClassifier,
+    // Defaulted so pre-existing call sites (mostly tests) don't all need updating.
+    private val widgetUpdater: WidgetUpdater = WidgetUpdater.Noop,
 ) {
     fun observeArticles(symbol: String): Flow<List<Article>> = articleDao.observeForTicker(symbol)
 
@@ -28,7 +31,10 @@ class NewsRepository(
      * The UI doesn't wait on classification separately: it observes
      * [observeArticles] as a Room Flow, which already emits the moment
      * insertAll below commits, then again once classification writes back —
-     * articles appear immediately, badges follow.
+     * articles appear immediately, badges follow. Also requests a
+     * home-screen widget update at the end, so every refresh path (manual
+     * ticker-detail, background poll) keeps it in sync without needing its
+     * own call site.
      */
     suspend fun refresh(ticker: Ticker): RefreshResult {
         val failures = mutableListOf<String>()
@@ -45,6 +51,7 @@ class NewsRepository(
         }
 
         classifyPending(ticker)
+        widgetUpdater.requestUpdate()
 
         return RefreshResult(fetchedCount = articles.size, failures = failures)
     }

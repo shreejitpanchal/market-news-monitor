@@ -7,19 +7,18 @@ trading decision — not another headline aggregator.
 ## Status
 
 **Phases 0–4 (scaffold, watchlist CRUD, live news feed, background
-alerts, and Claude urgency classification) are written, plus the SEC
-filings, earnings-aware sensitivity, and pre-market digest slices of
-Phase 5**, plus a Settings export/import feature — see
-[CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-for the full plan. Dedup clustering (Phase 4's third piece) and the
-home-screen widget (Phase 5's last piece) are deferred — see
-ARCHITECTURE.md. Notifications now only fire for `hot`-classified
-articles (or `warm` too within a day of earnings) — previously any new
-article notified regardless of urgency. **Not yet verified**:
-`gradle/wrapper/gradle-wrapper.jar` still needs to be generated (open the
-project in Android Studio, or run `gradle wrapper` locally) before
-`./scripts/dev.sh all` can actually build it — see "Getting started"
-below.
+alerts, and Claude urgency classification) are written, and Phase 5
+(SEC filings, earnings-aware sensitivity, pre-market digest, home-screen
+widget) is now fully built**, plus a Settings export/import feature —
+see [CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for the full plan. Only dedup clustering (Phase 4's third piece) remains
+deferred anywhere on the roadmap — see ARCHITECTURE.md. Notifications
+now only fire for `hot`-classified articles (or `warm` too within a day
+of earnings) — previously any new article notified regardless of
+urgency. **Not yet verified**: `gradle/wrapper/gradle-wrapper.jar` still
+needs to be generated (open the project in Android Studio, or run
+`gradle wrapper` locally) before `./scripts/dev.sh all` can actually
+build it — see "Getting started" below.
 
 ## Who it's for
 
@@ -45,6 +44,9 @@ through news noise, not as a product for distribution.
 - **Pre-market digest** — an optional once-a-day, 8 AM summary of your
   whole watchlist's notable news, written by Claude Sonnet. Off by
   default; skipped on days with nothing worth summarizing.
+- **Home-screen widget** — the same ticker + urgency badge list as
+  Dashboard, right on your home screen; tap a ticker to jump straight
+  into its news feed.
 
 Full phased roadmap, data-source choices, and the architecture reasoning
 behind them live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

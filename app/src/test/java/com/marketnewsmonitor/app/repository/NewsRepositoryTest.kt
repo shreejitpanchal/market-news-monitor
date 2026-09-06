@@ -9,6 +9,7 @@ import com.marketnewsmonitor.app.data.remote.NewsSource
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassification
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassifier
+import com.marketnewsmonitor.app.data.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
@@ -84,6 +85,15 @@ private class FakeArticleClassifier(private val results: Map<String, ArticleClas
     override suspend fun classify(ticker: Ticker, articles: List<Article>): Map<String, ArticleClassification> {
         lastBatchSize = articles.size
         return results
+    }
+}
+
+private class FakeWidgetUpdater : WidgetUpdater {
+    var requested = 0
+        private set
+
+    override suspend fun requestUpdate() {
+        requested++
     }
 }
 
@@ -277,5 +287,17 @@ class NewsRepositoryTest {
         val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), noopClassifier)
 
         assertNull(repository.getLatestUrgency("AAPL", TimeUnit.DAYS.toMillis(1)))
+    }
+
+    @Test
+    fun `refresh requests a widget update every time, so the widget never needs its own call site`() = runBlocking {
+        val dao = FakeArticleDao()
+        val registry = NewsSourceRegistry(listOf(FakeNewsSource("finnhub") { emptyList() }))
+        val widgetUpdater = FakeWidgetUpdater()
+        val repository = NewsRepository(dao, registry, noopClassifier, widgetUpdater)
+
+        repository.refresh(ticker)
+
+        assertEquals(1, widgetUpdater.requested)
     }
 }
