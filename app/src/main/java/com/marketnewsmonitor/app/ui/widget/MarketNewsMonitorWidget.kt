@@ -21,7 +21,6 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
-import androidx.glance.layout.defaultWeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
@@ -84,7 +83,7 @@ private fun WidgetRowContent(row: WidgetRow) {
             .clickable(actionStartActivity<MainActivity>(actionParametersOf(TickerSymbolKey to row.symbol))),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
+        Column {
             Text(row.symbol, style = TextStyle(fontWeight = FontWeight.Bold))
             row.companyName?.let { Text(it, style = TextStyle(fontSize = 12.sp)) }
         }
@@ -96,17 +95,25 @@ private fun WidgetRowContent(row: WidgetRow) {
             ) {
                 Text(
                     urgency.replaceFirstChar { it.uppercase() },
-                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 10.sp),
+                    style = TextStyle(color = whiteColorProvider(), fontSize = 10.sp),
                 )
             }
         }
     }
 }
 
-private fun urgencyColor(urgency: String): ColorProvider = ColorProvider(
-    when (urgency) {
-        Urgency.HOT -> MarketRed
-        Urgency.WARM -> MarketAmber
-        else -> MarketGreen
-    },
+// ColorProvider's factory requires both a day and a night color (Glance has
+// no single-color overload) -- this widget doesn't need distinct light/dark
+// art direction, so the same color is used for both.
+private fun urgencyColor(urgency: String) = ColorProvider(
+    day = urgencyBaseColor(urgency),
+    night = urgencyBaseColor(urgency),
 )
+
+private fun urgencyBaseColor(urgency: String): Color = when (urgency) {
+    Urgency.HOT -> MarketRed
+    Urgency.WARM -> MarketAmber
+    else -> MarketGreen
+}
+
+private fun whiteColorProvider() = ColorProvider(day = Color.White, night = Color.White)

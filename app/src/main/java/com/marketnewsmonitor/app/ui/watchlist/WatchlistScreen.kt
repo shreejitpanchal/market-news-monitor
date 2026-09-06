@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
@@ -111,9 +110,16 @@ private fun WatchlistRow(ticker: Ticker, onClick: () -> Unit, onRemove: () -> Un
             }
             Row {
                 IconButton(onClick = onToggleMuted) {
+                    // No "NotificationsOff" icon in material-icons-core (only in the
+                    // much larger -extended artifact) — differentiate by tint instead.
                     Icon(
-                        if (ticker.muted) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
+                        Icons.Filled.Notifications,
                         contentDescription = if (ticker.muted) "Unmute ${ticker.symbol}" else "Mute ${ticker.symbol}",
+                        tint = if (ticker.muted) {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                     )
                 }
                 IconButton(onClick = onRemove) {

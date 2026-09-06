@@ -20,8 +20,8 @@ class MarketNewsMonitorApp : Application(), Configuration.Provider {
     // Two independent factories (one per worker type) combined via
     // DelegatingWorkerFactory, WorkManager's own composition mechanism, so
     // neither needs to know about the other's worker.
-    override fun getWorkManagerConfiguration(): Configuration =
-        Configuration.Builder()
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
             .setWorkerFactory(
                 DelegatingWorkerFactory().apply {
                     addFactory(
