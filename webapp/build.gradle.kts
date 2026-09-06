@@ -1,10 +1,4 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-
-// Fixed (not auto-picked) so scripts/run_web.ps1/.sh and the CORS
-// allowlist in server/ can both hardcode the same URL instead of parsing
-// Gradle's console output for whatever port webpack happened to choose.
-val webDevServerPort = 19001
 
 // A Chrome desktop client backed by a local proxy (server/) -- NOT a
 // second production target, not a refactor of :app, and shares no code
@@ -13,6 +7,12 @@ val webDevServerPort = 19001
 // Vantage/EDGAR/Claude (CORS + API-key exposure), and why background
 // polling/notifications/the widget are dropped entirely (no browser
 // equivalent).
+//
+// The dev server port is pinned to 19001 via webpack.config.d/devServer.js
+// (the documented Kotlin/JS mechanism for webpack overrides), not via the
+// Kotlin Gradle DSL's KotlinWebpackConfig.DevServer type directly -- that
+// type's exact field mutability isn't something to guess at in a build
+// script that only gets checked by actually running Gradle.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
@@ -27,10 +27,6 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "webapp.js"
-                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).also {
-                    it.port = webDevServerPort
-                    it.open = true
-                }
             }
         }
         binaries.executable()

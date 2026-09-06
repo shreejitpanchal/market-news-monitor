@@ -81,12 +81,17 @@ first real run comes back clean.
   `dev.sh`/`dev.ps1`, same relationship `build_apk.sh` has to `dev.sh`,
   not a `dev.sh` task, since both are long-running processes rather than
   one-shot gates. **Ports are fixed, not webpack's auto-picked default**:
-  proxy on 8787, webapp dev server on 19001 (`webDevServerPort` in
-  `webapp/build.gradle.kts`, mirrored in the proxy's CORS allowlist and
-  both scripts) — an auto-picked port would drift out of sync with
-  whatever URL the script or CORS config assumed. The script polls each
-  port until it actually accepts a connection before opening Chrome,
-  rather than a fixed sleep, since first-run toolchain downloads make a
+  proxy on 8787, webapp dev server on 19001 — pinned via
+  `webapp/webpack.config.d/devServer.js` (Kotlin/JS's documented webpack-
+  override mechanism: every `.js` file there is merged into the generated
+  webpack config automatically), not the Kotlin Gradle DSL's
+  `KotlinWebpackConfig.DevServer` type directly, since that type's exact
+  field mutability isn't worth guessing at in a build script only Gradle
+  itself can check. Mirrored in the proxy's CORS allowlist and both
+  scripts — an auto-picked port would drift out of sync with whatever URL
+  the script or CORS config assumed. The script polls each port until it
+  actually accepts a connection before opening Chrome, rather than a
+  fixed sleep, since first-run toolchain downloads make a
   short guess unreliable.
 - **AI integration is a Claude API key, not subscription auth.** Reusing a
   Claude.ai Pro/Max login isn't a supported integration path for
