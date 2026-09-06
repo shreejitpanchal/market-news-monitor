@@ -177,8 +177,10 @@ private fun UserProfileFields(name: String, email: String, onSave: (name: String
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Your info", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Used to identify you to SEC EDGAR when fetching filings — its fair-access " +
-                "policy requires every request to be traceable to a real requester. Never sent anywhere else.",
+            "SEC EDGAR's fair-access policy requires every request to be traceable to a " +
+                "real requester. Your name and email are sent in plain text to SEC's servers " +
+                "with every filings request — that's the only place they go; no other data " +
+                "source or provider in this app receives them.",
             style = MaterialTheme.typography.bodySmall,
         )
         OutlinedTextField(

@@ -60,3 +60,9 @@ behind them live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 A personal information-triage tool, not investment advice. AI urgency
 scores are a filter to help you notice things faster, not a signal to
 trade on unexamined.
+
+If you fill in the "Your info" name/email fields in Settings, that
+information is sent in plain text to SEC EDGAR's servers with every
+filings request — required by their fair-access policy so requests are
+traceable to a real requester. It is not sent to any other data source
+this app uses (Finnhub, Google News RSS, or the Claude API).
