@@ -12,16 +12,15 @@ no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
 **Current status: Phase 0 (scaffold) through Phase 4 (Claude
-classification) are written, plus the SEC EDGAR filings slice of Phase 5**
-("trading-specific depth" — the other three pieces, earnings-aware
-sensitivity/pre-market digest/widget, are still unbuilt; see Roadmap
-below), plus a Settings export/import feature added ahead of its normal
-schedule because export/import needed somewhere to store the Claude and
-Finnhub API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar`
-isn't checked in (see Commands below), so no `./gradlew` command has
-actually been run against this code yet. Don't treat the roadmap
-checkboxes as "tested and working" until that first build/test run comes
-back clean.
+classification) are written, plus the SEC filings and earnings-aware
+sensitivity slices of Phase 5** ("trading-specific depth" — the other two
+pieces, pre-market digest/widget, are still unbuilt; see Roadmap below),
+plus a Settings export/import feature added ahead of its normal schedule
+because export/import needed somewhere to store the Claude and Finnhub
+API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't
+checked in (see Commands below), so no `./gradlew` command has actually
+been run against this code yet. Don't treat the roadmap checkboxes as
+"tested and working" until that first build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -110,6 +109,22 @@ back clean.
   lifetime, not re-fetched per poll** — it's the whole market (~1MB) and
   changes rarely. A failed fetch is deliberately *not* cached, so the
   next call retries instead of permanently disabling EDGAR until restart.
+- **Notifications are gated on classified urgency, not just "new and
+  fresh."** Baseline: only `hot` articles notify (`NewsPollRunner.
+  BASELINE_NOTIFY_URGENCIES`) — this was a real gap found while planning
+  Phase 5b: `docs/ARCHITECTURE.md` always said the worker should fire "for
+  anything flagged urgent," but that gate was never wired up when Phase 4
+  added classification, so every fresh article was notifying regardless
+  of urgency. An unclassified article (`urgency == null`) never notifies;
+  it's retried by the existing unclassified-retry loop and can still
+  notify on a later poll while inside the freshness window.
+- **Within ±1 day of a ticker's earnings date, `warm` also notifies**
+  (`NewsPollRunner.NEAR_EARNINGS_NOTIFY_URGENCIES`), via a Finnhub
+  earnings-calendar check (`FinnhubEarningsCalendarProvider`, same key as
+  company news, no caching — it's one cheap per-ticker call per poll).
+  Fails closed to the stricter baseline on any error, never open. Don't
+  change the ±1 day window or the hot/warm split without deciding it's
+  worth the same deliberation as the freshness window above.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -187,7 +202,7 @@ here as each phase actually lands:
 - [x] Phase 4 — Claude integration (classification, urgency badges) (unverified — see Status above; dedup clustering deferred)
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
   - [x] SEC filings feed (EDGAR 8-K/Form 4 via the existing news registry) (unverified — see Status above)
-  - [ ] Earnings-calendar-aware alert sensitivity
+  - [x] Earnings-calendar-aware alert sensitivity (unverified — see Status above; also added the missing baseline urgency gate)
   - [ ] Pre-market digest notification (Claude Sonnet)
   - [ ] Home-screen widget
 

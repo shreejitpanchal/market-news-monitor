@@ -5,6 +5,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import com.marketnewsmonitor.app.data.notifications.NotificationHelper
+import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 
@@ -16,6 +17,7 @@ class NewsPollWorkerFactory(
     private val tickerRepository: TickerRepository,
     private val newsRepository: NewsRepository,
     private val notificationHelper: NotificationHelper,
+    private val earningsCalendarProvider: EarningsCalendarProvider,
 ) : WorkerFactory() {
     override fun createWorker(
         appContext: Context,
@@ -23,7 +25,7 @@ class NewsPollWorkerFactory(
         workerParameters: WorkerParameters,
     ): ListenableWorker? = when (workerClassName) {
         NewsPollWorker::class.java.name ->
-            NewsPollWorker(appContext, workerParameters, tickerRepository, newsRepository, notificationHelper)
+            NewsPollWorker(appContext, workerParameters, tickerRepository, newsRepository, notificationHelper, earningsCalendarProvider)
         else -> null
     }
 }

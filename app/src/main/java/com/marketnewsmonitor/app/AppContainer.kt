@@ -10,7 +10,9 @@ import com.marketnewsmonitor.app.data.remote.claude.ClaudeArticleClassifier
 import com.marketnewsmonitor.app.data.remote.edgar.EdgarApi
 import com.marketnewsmonitor.app.data.remote.edgar.EdgarSource
 import com.marketnewsmonitor.app.data.remote.edgar.buildEdgarUserAgent
+import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubApi
+import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubEarningsCalendarProvider
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
 import com.marketnewsmonitor.app.data.settings.AppPreferences
@@ -72,4 +74,7 @@ class AppContainer(context: Context) {
     private val articleClassifier = ClaudeArticleClassifier(claudeApi) { secureSettingsStore.getClaudeApiKey() }
 
     val newsRepository = NewsRepository(database.articleDao(), newsSourceRegistry, articleClassifier)
+
+    val earningsCalendarProvider: EarningsCalendarProvider =
+        FinnhubEarningsCalendarProvider(finnhubApi) { secureSettingsStore.getFinnhubApiKey() }
 }

@@ -18,7 +18,12 @@ class MarketNewsMonitorApp : Application(), Configuration.Provider {
     override fun getWorkManagerConfiguration(): Configuration =
         Configuration.Builder()
             .setWorkerFactory(
-                NewsPollWorkerFactory(container.tickerRepository, container.newsRepository, container.notificationHelper),
+                NewsPollWorkerFactory(
+                    container.tickerRepository,
+                    container.newsRepository,
+                    container.notificationHelper,
+                    container.earningsCalendarProvider,
+                ),
             )
             .build()
 }

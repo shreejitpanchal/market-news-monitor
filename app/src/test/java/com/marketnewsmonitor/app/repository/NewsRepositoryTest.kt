@@ -4,6 +4,7 @@ import com.marketnewsmonitor.app.data.local.dao.ArticleDao
 import com.marketnewsmonitor.app.data.local.dao.TickerUrgency
 import com.marketnewsmonitor.app.data.local.entity.Article
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.local.entity.Urgency
 import com.marketnewsmonitor.app.data.remote.NewsSource
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassification
@@ -83,18 +84,23 @@ private class FakeArticleClassifier(private val results: Map<String, ArticleClas
     }
 }
 
+private val ALL_URGENCIES = setOf(Urgency.HOT, Urgency.WARM, Urgency.CALM)
+
 class NewsRepositoryTest {
 
     private val ticker = Ticker("AAPL", "Apple Inc.", 0L)
     private val noopClassifier = FakeArticleClassifier()
 
-    private fun article(sourceId: String, url: String) = Article(
+    // Defaults to "hot" so tests about freshness/notified-state (not urgency
+    // gating specifically) don't also need to think about the urgency filter.
+    private fun article(sourceId: String, url: String, urgency: String? = Urgency.HOT) = Article(
         id = "$sourceId|$url",
         tickerSymbol = "AAPL",
         sourceId = sourceId,
         headline = "Headline from $sourceId",
         url = url,
         publishedAt = 1L,
+        urgency = urgency,
     )
 
     @Test
@@ -157,7 +163,7 @@ class NewsRepositoryTest {
         )
         val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), noopClassifier)
 
-        val eligible = repository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1))
+        val eligible = repository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), ALL_URGENCIES)
 
         assertEquals(1, eligible.size)
         assertEquals("https://fresh", eligible.first().url)
@@ -170,18 +176,44 @@ class NewsRepositoryTest {
         val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), noopClassifier)
         val window = TimeUnit.DAYS.toMillis(1)
 
-        val beforeMark = repository.getUnnotifiedRecentArticles("AAPL", window)
+        val beforeMark = repository.getUnnotifiedRecentArticles("AAPL", window, ALL_URGENCIES)
         repository.markNotified(beforeMark)
-        val afterMark = repository.getUnnotifiedRecentArticles("AAPL", window)
+        val afterMark = repository.getUnnotifiedRecentArticles("AAPL", window, ALL_URGENCIES)
 
         assertEquals(1, beforeMark.size)
         assertTrue(afterMark.isEmpty())
     }
 
     @Test
+    fun `getUnnotifiedRecentArticles excludes urgencies outside the allowed set`() = runBlocking {
+        val dao = FakeArticleDao()
+        dao.insertAll(listOf(article("finnhub", "https://warm", urgency = Urgency.WARM)))
+        val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), noopClassifier)
+
+        val hotOnly = repository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), setOf(Urgency.HOT))
+        val hotAndWarm = repository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), setOf(Urgency.HOT, Urgency.WARM))
+
+        assertTrue(hotOnly.isEmpty())
+        assertEquals(1, hotAndWarm.size)
+    }
+
+    @Test
+    fun `getUnnotifiedRecentArticles never includes an unclassified article`() = runBlocking {
+        val dao = FakeArticleDao()
+        dao.insertAll(listOf(article("finnhub", "https://unclassified", urgency = null)))
+        val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), noopClassifier)
+
+        val eligible = repository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), ALL_URGENCIES)
+
+        assertTrue(eligible.isEmpty())
+    }
+
+    @Test
     fun `refresh classifies newly fetched articles and writes results back`() = runBlocking {
         val dao = FakeArticleDao()
-        val registry = NewsSourceRegistry(listOf(FakeNewsSource("finnhub") { listOf(article("finnhub", "https://a")) }))
+        val registry = NewsSourceRegistry(
+            listOf(FakeNewsSource("finnhub") { listOf(article("finnhub", "https://a", urgency = null)) }),
+        )
         val classifier = FakeArticleClassifier(
             results = mapOf("finnhub|https://a" to ArticleClassification("hot", "Earnings beat")),
         )
@@ -197,7 +229,7 @@ class NewsRepositoryTest {
     @Test
     fun `refresh also retries articles left unclassified from a previous attempt`() = runBlocking {
         val dao = FakeArticleDao()
-        dao.insertAll(listOf(article("finnhub", "https://old"))) // urgency still null, as if classification failed last time
+        dao.insertAll(listOf(article("finnhub", "https://old", urgency = null))) // as if classification failed last time
         val classifier = FakeArticleClassifier()
         val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()), classifier)
 

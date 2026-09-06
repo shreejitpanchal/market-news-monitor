@@ -122,9 +122,15 @@ Each phase ships something actually usable, not just a milestone.
    alert sensitivity, pre-market digest notification, home-screen widget.
    **Shipped: the SEC filings feed** — `EdgarSource` is just another
    `NewsSource` (see §1's registry pattern), so filings flow through the
-   existing Room table, classifier, notifications, and UI unchanged. The
-   other three pieces (earnings-aware sensitivity, digest, widget) are
-   still unbuilt.
+   existing Room table, classifier, notifications, and UI unchanged.
+   **Shipped: earnings-calendar-aware alert sensitivity** — while wiring
+   this up it turned out notifications had no urgency gate at all (any
+   fresh article notified, not just "flagged urgent" as this doc always
+   said), so that baseline gate was added at the same time: only `hot`
+   notifies by default, and `warm` also notifies within ±1 day of a
+   ticker's earnings date (via Finnhub's earnings-calendar endpoint, same
+   key as company news). The remaining two pieces (pre-market digest,
+   widget) are still unbuilt.
 
 ## 5. Stretch ideas (not scheduled)
 

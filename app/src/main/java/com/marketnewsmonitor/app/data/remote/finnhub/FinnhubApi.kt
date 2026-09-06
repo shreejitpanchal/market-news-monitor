@@ -13,6 +13,14 @@ interface FinnhubApi {
         @Query("token") token: String,
     ): List<FinnhubNewsDto>
 
+    @GET("calendar/earnings")
+    suspend fun earningsCalendar(
+        @Query("symbol") symbol: String,
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("token") token: String,
+    ): FinnhubEarningsCalendarResponse
+
     companion object {
         const val BASE_URL = "https://finnhub.io/api/v1/"
     }
@@ -25,3 +33,9 @@ data class FinnhubNewsDto(
     val source: String = "",
     val datetime: Long = 0L,
 )
+
+@Serializable
+data class FinnhubEarningsCalendarResponse(val earningsCalendar: List<FinnhubEarningsEntry> = emptyList())
+
+@Serializable
+data class FinnhubEarningsEntry(val date: String = "", val symbol: String = "")

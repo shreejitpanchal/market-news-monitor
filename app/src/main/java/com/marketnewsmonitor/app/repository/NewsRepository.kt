@@ -60,11 +60,16 @@ class NewsRepository(
 
     /**
      * Notify-eligible articles for [symbol]: not yet notified, published within
-     * [freshnessWindowMillis] of now. Bounds a freshly-added ticker's first poll
-     * from dumping a week of backfill as one giant notification.
+     * [freshnessWindowMillis] of now (bounds a freshly-added ticker's first poll
+     * from dumping a week of backfill as one giant notification), classified as
+     * one of [allowedUrgencies] — an unclassified article (urgency == null,
+     * missing key or a transient classification failure) never notifies; it's
+     * retried by [classifyPending] and can still notify on a later poll while
+     * still inside the freshness window.
      */
-    suspend fun getUnnotifiedRecentArticles(symbol: String, freshnessWindowMillis: Long): List<Article> =
+    suspend fun getUnnotifiedRecentArticles(symbol: String, freshnessWindowMillis: Long, allowedUrgencies: Set<String>): List<Article> =
         articleDao.getUnnotifiedSince(symbol, System.currentTimeMillis() - freshnessWindowMillis)
+            .filter { it.urgency in allowedUrgencies }
 
     suspend fun markNotified(articles: List<Article>) {
         if (articles.isEmpty()) return

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.marketnewsmonitor.app.data.notifications.ArticleNotifier
+import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 
@@ -20,10 +21,11 @@ class NewsPollWorker(
     private val tickerRepository: TickerRepository,
     private val newsRepository: NewsRepository,
     private val notifier: ArticleNotifier,
+    private val earningsCalendarProvider: EarningsCalendarProvider,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        NewsPollRunner(tickerRepository, newsRepository, notifier).pollAll()
+        NewsPollRunner(tickerRepository, newsRepository, notifier, earningsCalendarProvider).pollAll()
         return Result.success()
     }
 }

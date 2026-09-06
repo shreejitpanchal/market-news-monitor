@@ -5,11 +5,13 @@ import com.marketnewsmonitor.app.data.local.dao.TickerDao
 import com.marketnewsmonitor.app.data.local.dao.TickerUrgency
 import com.marketnewsmonitor.app.data.local.entity.Article
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.local.entity.Urgency
 import com.marketnewsmonitor.app.data.notifications.ArticleNotifier
 import com.marketnewsmonitor.app.data.remote.NewsSource
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassification
 import com.marketnewsmonitor.app.data.remote.claude.ArticleClassifier
+import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 import kotlinx.coroutines.flow.Flow
@@ -76,15 +78,25 @@ private class FakeArticleNotifier(private val throwFor: String? = null) : Articl
     }
 }
 
-private fun article(symbol: String, sourceId: String, url: String, publishedAt: Long = System.currentTimeMillis()) =
-    Article(
-        id = "$sourceId|$url",
-        tickerSymbol = symbol,
-        sourceId = sourceId,
-        headline = "Headline for $symbol",
-        url = url,
-        publishedAt = publishedAt,
-    )
+private fun article(
+    symbol: String,
+    sourceId: String,
+    url: String,
+    publishedAt: Long = System.currentTimeMillis(),
+    urgency: String? = Urgency.HOT, // classified+hot by default, so baseline notification gating doesn't need to be every test's concern
+) = Article(
+    id = "$sourceId|$url",
+    tickerSymbol = symbol,
+    sourceId = sourceId,
+    headline = "Headline for $symbol",
+    url = url,
+    publishedAt = publishedAt,
+    urgency = urgency,
+)
+
+private class FakeEarningsCalendarProvider(private val nearEarnings: Set<String> = emptySet()) : EarningsCalendarProvider {
+    override suspend fun isNearEarnings(ticker: Ticker): Boolean = ticker.symbol in nearEarnings
+}
 
 /** Returns one article per ticker, keyed by that ticker's own symbol. */
 private fun perTickerSource(sourceId: String = "finnhub") = object : NewsSource {
@@ -101,7 +113,7 @@ class NewsPollRunnerTest {
         )
         val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier()
-        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
+        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier, FakeEarningsCalendarProvider())
 
         runner.pollAll()
 
@@ -113,12 +125,14 @@ class NewsPollRunnerTest {
         val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L, muted = false)))
         val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier()
-        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
+        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier, FakeEarningsCalendarProvider())
 
         runner.pollAll()
 
         assertEquals(listOf("AAPL"), notifier.notifiedTickers)
-        assertTrue(newsRepository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1)).isEmpty())
+        assertTrue(
+            newsRepository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), setOf(Urgency.HOT)).isEmpty(),
+        )
     }
 
     @Test
@@ -126,10 +140,71 @@ class NewsPollRunnerTest {
         val tickerDao = FakeTickerDao(listOf(Ticker("BAD", "Bad Co", 0L), Ticker("AAPL", "Apple", 0L)))
         val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier(throwFor = "BAD")
-        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
+        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier, FakeEarningsCalendarProvider())
 
         runner.pollAll()
 
         assertEquals(listOf("AAPL"), notifier.notifiedTickers)
+    }
+
+    @Test
+    fun `a warm article does not notify at baseline sensitivity`() = runBlocking {
+        val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L)))
+        val source = object : NewsSource {
+            override val id = "finnhub"
+            override suspend fun fetch(ticker: Ticker): List<Article> =
+                listOf(article(ticker.symbol, "finnhub", "https://a", urgency = Urgency.WARM))
+        }
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(source)), NoopArticleClassifier())
+        val notifier = FakeArticleNotifier()
+        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier, FakeEarningsCalendarProvider())
+
+        runner.pollAll()
+
+        assertTrue(notifier.notifiedTickers.isEmpty())
+    }
+
+    @Test
+    fun `a warm article does notify when the ticker is near earnings`() = runBlocking {
+        val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L)))
+        val source = object : NewsSource {
+            override val id = "finnhub"
+            override suspend fun fetch(ticker: Ticker): List<Article> =
+                listOf(article(ticker.symbol, "finnhub", "https://a", urgency = Urgency.WARM))
+        }
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(source)), NoopArticleClassifier())
+        val notifier = FakeArticleNotifier()
+        val runner = NewsPollRunner(
+            TickerRepository(tickerDao),
+            newsRepository,
+            notifier,
+            FakeEarningsCalendarProvider(nearEarnings = setOf("AAPL")),
+        )
+
+        runner.pollAll()
+
+        assertEquals(listOf("AAPL"), notifier.notifiedTickers)
+    }
+
+    @Test
+    fun `a calm article never notifies even near earnings`() = runBlocking {
+        val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L)))
+        val source = object : NewsSource {
+            override val id = "finnhub"
+            override suspend fun fetch(ticker: Ticker): List<Article> =
+                listOf(article(ticker.symbol, "finnhub", "https://a", urgency = Urgency.CALM))
+        }
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(source)), NoopArticleClassifier())
+        val notifier = FakeArticleNotifier()
+        val runner = NewsPollRunner(
+            TickerRepository(tickerDao),
+            newsRepository,
+            notifier,
+            FakeEarningsCalendarProvider(nearEarnings = setOf("AAPL")),
+        )
+
+        runner.pollAll()
+
+        assertTrue(notifier.notifiedTickers.isEmpty())
     }
 }
