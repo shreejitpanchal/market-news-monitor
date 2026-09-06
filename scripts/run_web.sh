@@ -20,9 +20,16 @@
 # First run will take a while: the Kotlin/Wasm toolchain + webpack tooling
 # have to download, plus Ktor's dependencies for the proxy -- this script
 # waits for each port to actually accept connections before moving on.
+#
+# Ctrl+C here stops this script's own two backgrounded Gradle invocations
+# (via the trap below), but Gradle daemons are long-lived by design and
+# may keep the actual server/dev-server processes alive regardless --
+# run scripts/stop_web.sh afterward if ports 8787/19001 are still in use.
 # Git-bash-on-Windows parity script -- run_web.ps1 is the primary one for
 # this environment.
 set -uo pipefail
+
+trap 'echo; echo "Stopping..."; jobs -p | xargs -r kill 2>/dev/null; exit 0' INT TERM
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -89,4 +96,5 @@ echo "Opening $DEV_SERVER_URL in Chrome (webapp dev server is on port $WEB_PORT)
 cmd.exe /c start chrome "$DEV_SERVER_URL" 2>/dev/null || cmd.exe /c start "$DEV_SERVER_URL"
 
 echo "Logs: $PROXY_LOG and $WEBAPP_LOG (tail -f to follow live)."
+echo "Ctrl+C stops this script; run scripts/stop_web.sh afterward if ports $PROXY_PORT/$WEB_PORT are still in use."
 wait

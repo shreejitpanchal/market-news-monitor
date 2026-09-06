@@ -438,6 +438,19 @@ still there by the time anyone looks. Pass `--debug` (`.sh`) / `-Debug`
 (`.ps1`) for `--info --stacktrace` Gradle output when the plain logs
 aren't enough.
 
+`scripts/stop_web.ps1` / `stop_web.sh` stop them — by finding whatever
+process is actually listening on ports 8787/19001, not by a remembered
+PID, since Gradle daemons (and the dev server they run) are long-lived
+by design and outlive the shell/window that launched them. Closing the
+terminal that ran `run_web.sh`/`.ps1`, or Ctrl+C on it, does not
+reliably stop these — `run_web.sh` traps Ctrl+C to stop its own two
+backgrounded Gradle invocations, but if a daemon already detached, run
+the stop script. Leaves Gradle daemons themselves running (harmless,
+reused across builds); `./gradlew.bat --stop` if those should go too.
+`kotlin-js-store/yarn.lock` is committed (not gitignored) — Kotlin/JS's
+own convention for reproducible `wasmJs` toolchain dependency
+resolution, the same reasoning as committing any other lockfile.
+
 `gradle/wrapper/gradle-wrapper.jar` is checked in and `./gradlew` works
 — it had to be generated via a real local Gradle install (an agent
 writing text files can't produce a compiled binary), which also fixed

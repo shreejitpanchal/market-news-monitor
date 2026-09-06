@@ -107,4 +107,6 @@ if (-not $ready) {
     Write-Host "Note: the dev server never reported ready on port $WebPort before Chrome opened -- check $WebappLog for the real error, then refresh $DevServerUrl once it's up."
 }
 
+Write-Host "Run scripts\stop_web.ps1 to stop both processes -- closing these windows doesn't reliably stop the underlying Gradle daemons."
+
 Write-Host "Logs: $ProxyLog and $WebappLog"
