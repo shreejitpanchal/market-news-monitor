@@ -1,4 +1,10 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+
+// Fixed (not auto-picked) so scripts/run_web.ps1/.sh and the CORS
+// allowlist in server/ can both hardcode the same URL instead of parsing
+// Gradle's console output for whatever port webpack happened to choose.
+val webDevServerPort = 19001
 
 // A Chrome desktop client backed by a local proxy (server/) -- NOT a
 // second production target, not a refactor of :app, and shares no code
@@ -21,6 +27,10 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "webapp.js"
+                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).also {
+                    it.port = webDevServerPort
+                    it.open = true
+                }
             }
         }
         binaries.executable()

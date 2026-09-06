@@ -34,7 +34,8 @@ import java.util.Properties
  */
 
 private const val PORT = 8787
-private const val WEBAPP_DEV_ORIGIN = "localhost:8080"
+// Must match webDevServerPort in webapp/build.gradle.kts.
+private const val WEBAPP_DEV_ORIGIN = "localhost:19001"
 
 // Gradle's `run` task working directory is this module's own project dir
 // (server/), so this resolves to server/local.properties without needing

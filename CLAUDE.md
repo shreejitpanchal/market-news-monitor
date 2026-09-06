@@ -80,7 +80,14 @@ first real run comes back clean.
   dev server before opening Chrome — a dedicated launcher alongside
   `dev.sh`/`dev.ps1`, same relationship `build_apk.sh` has to `dev.sh`,
   not a `dev.sh` task, since both are long-running processes rather than
-  one-shot gates.
+  one-shot gates. **Ports are fixed, not webpack's auto-picked default**:
+  proxy on 8787, webapp dev server on 19001 (`webDevServerPort` in
+  `webapp/build.gradle.kts`, mirrored in the proxy's CORS allowlist and
+  both scripts) — an auto-picked port would drift out of sync with
+  whatever URL the script or CORS config assumed. The script polls each
+  port until it actually accepts a connection before opening Chrome,
+  rather than a fixed sleep, since first-run toolchain downloads make a
+  short guess unreliable.
 - **AI integration is a Claude API key, not subscription auth.** Reusing a
   Claude.ai Pro/Max login isn't a supported integration path for
   third-party apps — Anthropic doesn't expose that as an API. Don't
