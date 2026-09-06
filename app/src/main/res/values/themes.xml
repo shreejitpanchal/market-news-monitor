@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MarketNewsMonitor" parent="android:Theme.Material.DayNight.NoActionBar" />
+    <!--
+      Platform Material themes have no "DayNight" variant (that's an
+      AppCompat/Material-Components library concept) — Theme.Material has
+      followed the system's day/night uiMode natively since API 29, and the
+      real light/dark switching for this app's UI happens in Compose
+      (MarketNewsMonitorTheme, ui/theme/Theme.kt) regardless. This Activity
+      theme is only the brief pre-Compose window background.
+    -->
+    <style name="Theme.MarketNewsMonitor" parent="android:Theme.Material.NoActionBar" />
 </resources>
