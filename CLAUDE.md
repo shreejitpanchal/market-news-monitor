@@ -272,3 +272,11 @@ a duplicate-`shift` bug in the hand-authored `gradlew` that predated
 the real jar. If the wrapper ever needs regenerating (e.g. bumping the
 Gradle version), that's still a real Gradle install + `gradle wrapper
 --gradle-version <version>`, not something to hand-author again.
+
+**Needs a local Android SDK too** — a machine-specific `local.properties`
+with `sdk.dir=<path to Android SDK>` (or an `ANDROID_HOME` env var),
+never committed (`.gitignore` already covers `local.properties`). On
+this dev machine that's `C:\Users\shree\Android\sdk` — installed for
+the `coding-adventure` Flutter project, but it already had SDK platform
+35 + build-tools 35.0.0 + accepted licenses, exactly what this project
+needs, so it's reused rather than installing a second one.
