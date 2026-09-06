@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.security.GeneralSecurityException
 
 sealed interface BackupStatus {
     data object Idle : BackupStatus
@@ -121,29 +122,31 @@ class SettingsViewModel(
         _userEmail.value = appPreferences.userEmail
     }
 
-    fun exportSetup(uri: Uri) {
+    fun exportSetup(uri: Uri, password: String) {
         _status.value = BackupStatus.Exporting
         viewModelScope.launch {
             _status.value = try {
-                backupRepository.exportTo(uri)
-                BackupStatus.Success("Setup exported.")
+                backupRepository.exportTo(uri, password)
+                BackupStatus.Success("Setup exported. Keep the password — it can't be recovered if lost.")
             } catch (e: Exception) {
                 BackupStatus.Error("Export failed: ${e.message}")
             }
         }
     }
 
-    fun importSetup(uri: Uri) {
+    fun importSetup(uri: Uri, password: String) {
         _status.value = BackupStatus.Importing
         viewModelScope.launch {
             _status.value = try {
-                backupRepository.importFrom(uri)
+                backupRepository.importFrom(uri, password)
                 _claudeApiKey.value = secureSettingsStore.getClaudeApiKey().orEmpty()
                 _finnhubApiKey.value = secureSettingsStore.getFinnhubApiKey().orEmpty()
                 _alphaVantageApiKey.value = secureSettingsStore.getAlphaVantageApiKey().orEmpty()
                 _userName.value = appPreferences.userName
                 _userEmail.value = appPreferences.userEmail
                 BackupStatus.Success("Setup imported. Watchlist and API keys restored.")
+            } catch (e: GeneralSecurityException) {
+                BackupStatus.Error("Import failed: incorrect password or corrupted file.")
             } catch (e: Exception) {
                 BackupStatus.Error("Import failed: ${e.message}")
             }

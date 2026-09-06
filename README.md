@@ -35,9 +35,10 @@ through news noise, not as a product for distribution.
   Dashboard, right on your home screen; tap a ticker to jump straight
   into its news feed.
 - **Export / import setup** — back up the watchlist and API keys to a
-  JSON file you choose (and restore from one), so reinstalling doesn't
-  mean starting over. The exported file contains your keys in plain
-  text by design — treat it like a password.
+  password-protected, encrypted JSON file you choose (and restore from
+  one), so reinstalling or switching phones doesn't mean starting over.
+  The password is set at export time and never stored anywhere — losing
+  it means the backup can't be recovered.
 
 Full architecture reasoning and data-source choices live in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

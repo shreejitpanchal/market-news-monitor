@@ -53,6 +53,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val digestEnabled by viewModel.digestEnabled.collectAsState()
     val status by viewModel.status.collectAsState()
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var showExportPasswordDialog by remember { mutableStateOf(false) }
+    var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var notificationDenied by remember { mutableStateOf(false) }
     var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
@@ -78,7 +80,11 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri -> uri?.let(viewModel::exportSetup) }
+    ) { uri ->
+        val password = pendingExportPassword
+        pendingExportPassword = null
+        if (uri != null && password != null) viewModel.exportSetup(uri, password)
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -181,18 +187,13 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         Text("Export / import setup", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Exports your watchlist and API keys to a file you choose. " +
-                "This file contains your API keys in plain text — store it securely, " +
-                "the same way you would a password.",
+            "Exports your watchlist and API keys to a password-protected, encrypted " +
+                "JSON file you choose. The password never leaves this device and isn't " +
+                "stored anywhere — if you lose it, the backup can't be recovered.",
             style = MaterialTheme.typography.bodySmall,
         )
 
-        OutlinedButton(
-            onClick = {
-                val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                exportLauncher.launch("marketnewsmonitor-backup-$stamp.json")
-            },
-        ) { Text("Export setup") }
+        OutlinedButton(onClick = { showExportPasswordDialog = true }) { Text("Export setup") }
 
         OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
             Text("Import setup")
@@ -207,20 +208,97 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    pendingImportUri?.let { uri ->
-        AlertDialog(
-            onDismissRequest = { pendingImportUri = null },
-            title = { Text("Import setup?") },
-            text = { Text("This replaces your current watchlist and API keys with the contents of the chosen file.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.importSetup(uri)
-                    pendingImportUri = null
-                }) { Text("Replace") }
+    if (showExportPasswordDialog) {
+        ExportPasswordDialog(
+            onDismiss = { showExportPasswordDialog = false },
+            onConfirm = { password ->
+                pendingExportPassword = password
+                showExportPasswordDialog = false
+                val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                exportLauncher.launch("marketnewsmonitor-backup-$stamp.json")
             },
-            dismissButton = { TextButton(onClick = { pendingImportUri = null }) { Text("Cancel") } },
         )
     }
+
+    pendingImportUri?.let { uri ->
+        ImportPasswordDialog(
+            onDismiss = { pendingImportUri = null },
+            onConfirm = { password ->
+                viewModel.importSetup(uri, password)
+                pendingImportUri = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ExportPasswordDialog(onDismiss: () -> Unit, onConfirm: (password: String) -> Unit) {
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    val passwordsMatch = password.isNotBlank() && password == confirmPassword
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set a backup password") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "This password encrypts the exported file. It's never stored — " +
+                        "write it down somewhere safe, since a lost password means the " +
+                        "backup can't be recovered.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = confirmPassword.isNotEmpty() && !passwordsMatch,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(password) }, enabled = passwordsMatch) { Text("Export") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun ImportPasswordDialog(onDismiss: () -> Unit, onConfirm: (password: String) -> Unit) {
+    var password by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import setup?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This replaces your current watchlist and API keys with the contents of the chosen file.")
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Backup password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(password) }, enabled = password.isNotBlank()) { Text("Replace") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

@@ -18,8 +18,10 @@ class BackupRepository(
     private val appPreferences: AppPreferences,
 ) {
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+    private val envelopeJson = Json { ignoreUnknownKeys = true }
 
-    suspend fun exportTo(uri: Uri) = withContext(Dispatchers.IO) {
+    /** The whole file is password-encrypted (see [BackupCrypto]) — password-based, not device-bound, so a backup restores after a reinstall or on a new phone. */
+    suspend fun exportTo(uri: Uri, password: String) = withContext(Dispatchers.IO) {
         val backup = BackupData(
             exportedAt = System.currentTimeMillis(),
             tickers = tickerRepository.getTickers().map {
@@ -31,17 +33,23 @@ class BackupRepository(
             userEmail = appPreferences.userEmail,
             alphaVantageApiKey = secureSettingsStore.getAlphaVantageApiKey(),
         )
+        val plaintext = json.encodeToString(BackupData.serializer(), backup).encodeToByteArray()
+        val envelope = BackupCrypto.encrypt(plaintext, password)
+
         val resolver = context.contentResolver
         resolver.openOutputStream(uri)?.use { out ->
-            out.write(json.encodeToString(BackupData.serializer(), backup).toByteArray())
+            out.write(envelopeJson.encodeToString(EncryptedBackupEnvelope.serializer(), envelope).toByteArray())
         } ?: throw IOException("Could not open $uri for writing")
     }
 
-    suspend fun importFrom(uri: Uri) = withContext(Dispatchers.IO) {
+    /** @throws java.security.GeneralSecurityException if [password] is wrong or the file was tampered with. */
+    suspend fun importFrom(uri: Uri, password: String) = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         val text = resolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
             ?: throw IOException("Could not open $uri for reading")
-        val backup = json.decodeFromString(BackupData.serializer(), text)
+        val envelope = envelopeJson.decodeFromString(EncryptedBackupEnvelope.serializer(), text)
+        val plaintext = BackupCrypto.decrypt(envelope, password)
+        val backup = json.decodeFromString(BackupData.serializer(), plaintext.decodeToString())
 
         tickerRepository.replaceAll(
             backup.tickers.map { Ticker(it.symbol, it.companyName, it.addedAt, it.muted) },

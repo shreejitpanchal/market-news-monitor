@@ -54,12 +54,30 @@ first real run comes back clean.
   dashboard on open would be a worse experience than the extra API calls
   cost, and this path doesn't touch `WorkManager` at all, so it works
   even with background polling disabled.
-- **Settings export/import includes the Claude and Finnhub API keys in
-  plain text.** User's explicit choice, made when this feature was built
-  (Phase 1) — convenience over encrypting the export. The Settings screen
-  shows a warning above the Export button rather than hiding the risk.
-  Don't add export-file encryption unasked; don't silently drop a key from
-  exports either — both would contradict a decision already made.
+- **Settings export/import is a password-encrypted JSON file, not plain
+  text.** Originally shipped plaintext by explicit choice (convenience);
+  reversed when the user explicitly asked for encryption. `BackupCrypto`
+  (`data/backup/BackupCrypto.kt`) derives an AES-256 key from a
+  user-entered password via PBKDF2-HMAC-SHA256 (210,000 iterations,
+  random salt) and encrypts the *entire* serialized `BackupData` payload
+  with AES-GCM (random IV, authenticated) — not just the API-key fields.
+  The file on disk is `EncryptedBackupEnvelope`, itself plain JSON
+  (format id, iterations, salt/iv/ciphertext as base64), so "the export
+  is JSON" still holds even though the payload inside is opaque.
+  Deliberately **password-based, not an Android Keystore-bound key**: a
+  Keystore key is wiped on uninstall and never leaves the device, which
+  would make a backup permanently undecryptable after exactly the
+  reinstall/phone-swap scenario export/import exists for. The password
+  is asked for at export time (with a confirm field, since a typo makes
+  the backup unrecoverable) and again at import time
+  (`ExportPasswordDialog`/`ImportPasswordDialog` in `SettingsScreen.kt`)
+  — it is never itself stored anywhere. A wrong password or a tampered
+  file both fail loudly via GCM's authentication tag
+  (`GeneralSecurityException`), surfaced as "incorrect password or
+  corrupted file," never silently returning garbage data. There is no
+  fallback path for the old plaintext format — this app has no real
+  installs yet, so a clean break was preferred over the extra code a
+  legacy-format reader would need.
 - **RSS source is Google News per-ticker search, not Yahoo
   Finance/Reuters/MarketWatch as originally documented.** Changed during
   Phase 2 — those three no longer reliably serve public per-ticker RSS
