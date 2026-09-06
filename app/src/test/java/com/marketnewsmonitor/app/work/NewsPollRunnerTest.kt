@@ -55,8 +55,8 @@ private class FakeArticleDao : ArticleDao {
     override suspend fun getUnclassified(symbol: String, limit: Int): List<Article> =
         byId.values.filter { it.tickerSymbol == symbol && it.urgency == null }.take(limit)
 
-    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String) {
-        byId[id]?.let { byId[id] = it.copy(urgency = urgency, whyItMatters = whyItMatters) }
+    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String, clusterId: String?) {
+        byId[id]?.let { byId[id] = it.copy(urgency = urgency, whyItMatters = whyItMatters, clusterId = clusterId) }
     }
 
     override suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String? = null
@@ -73,10 +73,13 @@ private class NoopArticleClassifier : ArticleClassifier {
 
 private class FakeArticleNotifier(private val throwFor: String? = null) : ArticleNotifier {
     val notifiedTickers = mutableListOf<String>()
+    var lastNotifiedArticleCount = -1
+        private set
 
     override fun notifyNewArticles(ticker: Ticker, articles: List<Article>): Boolean {
         if (ticker.symbol == throwFor) throw IllegalStateException("boom")
         notifiedTickers += ticker.symbol
+        lastNotifiedArticleCount = articles.size
         return true
     }
 }
@@ -209,5 +212,28 @@ class NewsPollRunnerTest {
         runner.pollAll()
 
         assertTrue(notifier.notifiedTickers.isEmpty())
+    }
+
+    @Test
+    fun `clustered articles notify once but mark every cluster member notified`() = runBlocking {
+        val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L)))
+        val articleDao = FakeArticleDao()
+        val source = object : NewsSource {
+            override val id = "finnhub"
+            override suspend fun fetch(ticker: Ticker): List<Article> = listOf(
+                article(ticker.symbol, "finnhub", "https://a").copy(clusterId = "finnhub|https://a"),
+                article(ticker.symbol, "google_news_rss", "https://b").copy(clusterId = "finnhub|https://a"),
+            )
+        }
+        val newsRepository = NewsRepository(articleDao, NewsSourceRegistry(listOf(source)), NoopArticleClassifier())
+        val notifier = FakeArticleNotifier()
+        val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier, FakeEarningsCalendarProvider())
+
+        runner.pollAll()
+
+        assertEquals(1, notifier.lastNotifiedArticleCount)
+        assertTrue(
+            newsRepository.getUnnotifiedRecentArticles("AAPL", TimeUnit.DAYS.toMillis(1), setOf(Urgency.HOT)).isEmpty(),
+        )
     }
 }

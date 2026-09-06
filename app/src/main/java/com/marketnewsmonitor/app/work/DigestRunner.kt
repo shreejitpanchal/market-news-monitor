@@ -5,6 +5,7 @@ import com.marketnewsmonitor.app.data.notifications.DigestNotifier
 import com.marketnewsmonitor.app.data.remote.claude.DigestGenerator
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
+import com.marketnewsmonitor.app.repository.collapseClusters
 import java.util.concurrent.TimeUnit
 
 /**
@@ -19,8 +20,11 @@ class DigestRunner(
 ) {
     suspend fun run() {
         val tickers = tickerRepository.getTickers().filterNot { it.muted }
+        // Collapsed per ticker so a story two outlets both reported doesn't
+        // get summarized twice in the same digest — no "already digested"
+        // state to track, this is purely a prompt-input dedup.
         val notable = tickers.associateWith { ticker ->
-            newsRepository.getRecentNotableArticles(ticker.symbol, WINDOW_MILLIS, NOTABLE_URGENCIES)
+            collapseClusters(newsRepository.getRecentNotableArticles(ticker.symbol, WINDOW_MILLIS, NOTABLE_URGENCIES))
         }.filterValues { it.isNotEmpty() }
 
         if (notable.isEmpty()) return

@@ -81,4 +81,31 @@ class ClaudeArticleClassifierTest {
 
         assertTrue(parsed.isEmpty())
     }
+
+    @Test
+    fun `prompt instructs clustering of same-story articles`() {
+        val ticker = Ticker("AAPL", "Apple Inc.", 0L)
+
+        val prompt = buildClassificationPrompt(ticker, listOf(article("a1", "Headline")))
+
+        assertTrue(prompt.contains("cluster"))
+    }
+
+    @Test
+    fun `parses a cluster integer when present`() {
+        val text = """[{"id": "a1", "urgency": "hot", "why": "Earnings beat", "cluster": 1}]"""
+
+        val parsed = parseClassificationResponse(text)
+
+        assertEquals(1, parsed.first().cluster)
+    }
+
+    @Test
+    fun `defaults cluster to null when absent`() {
+        val text = """[{"id": "a1", "urgency": "calm", "why": "Routine recap"}]"""
+
+        val parsed = parseClassificationResponse(text)
+
+        assertEquals(null, parsed.first().cluster)
+    }
 }

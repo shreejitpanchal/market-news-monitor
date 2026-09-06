@@ -56,12 +56,22 @@ class NewsRepository(
         return RefreshResult(fetchedCount = articles.size, failures = failures)
     }
 
+    /**
+     * Resolves each batch's local [ArticleClassification.clusterKey] integers
+     * (only meaningful within this one Claude response) into stable
+     * [Article.clusterId] strings — the first article id seen for a given
+     * local key becomes the canonical id for every article sharing it, so no
+     * separate id generator is needed.
+     */
     private suspend fun classifyPending(ticker: Ticker) {
         val unclassified = articleDao.getUnclassified(ticker.symbol, ClaudeArticleClassifier.MAX_ARTICLES_PER_CALL)
         if (unclassified.isEmpty()) return
         val results = classifier.classify(ticker, unclassified)
-        for ((id, classification) in results) {
-            articleDao.updateClassification(id, classification.urgency, classification.whyItMatters)
+        val clusterIdByKey = mutableMapOf<Int, String>()
+        for (article in unclassified) {
+            val classification = results[article.id] ?: continue
+            val clusterId = classification.clusterKey?.let { key -> clusterIdByKey.getOrPut(key) { article.id } }
+            articleDao.updateClassification(article.id, classification.urgency, classification.whyItMatters, clusterId)
         }
     }
 
@@ -106,3 +116,18 @@ class NewsRepository(
 }
 
 data class RefreshResult(val fetchedCount: Int, val failures: List<String>)
+
+/**
+ * One representative per non-null [Article.clusterId] (first occurrence
+ * kept), every null-`clusterId` article kept as-is. Used to avoid notifying
+ * or digesting the same underlying story once per outlet — callers that also
+ * need to mark the *full* set as handled (e.g. notifications' `markNotified`)
+ * should keep the original, uncollapsed list for that.
+ */
+fun collapseClusters(articles: List<Article>): List<Article> {
+    val seenClusterIds = mutableSetOf<String>()
+    return articles.filter { article ->
+        val clusterId = article.clusterId ?: return@filter true
+        seenClusterIds.add(clusterId)
+    }
+}

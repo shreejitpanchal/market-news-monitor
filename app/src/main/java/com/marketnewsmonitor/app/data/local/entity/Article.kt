@@ -15,6 +15,11 @@ data class Article(
     // Populated by Claude Haiku (Phase 4) — null until classified.
     val urgency: String? = null,
     val whyItMatters: String? = null,
+    // Dedup clustering: articles sharing a non-null clusterId are the same
+    // underlying story reported by different outlets. The value is one of
+    // the group's own article ids (whichever was seen first), not a
+    // separately generated id — see NewsRepository.classifyPending.
+    val clusterId: String? = null,
 )
 
 /** Urgency values Claude is prompted to use — see ClaudeArticleClassifier. */

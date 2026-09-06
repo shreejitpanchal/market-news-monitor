@@ -46,8 +46,8 @@ private class FakeArticleDao : ArticleDao {
     override suspend fun getUnclassified(symbol: String, limit: Int): List<Article> =
         byId.values.filter { it.tickerSymbol == symbol && it.urgency == null }.take(limit)
 
-    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String) {
-        byId[id]?.let { byId[id] = it.copy(urgency = urgency, whyItMatters = whyItMatters) }
+    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String, clusterId: String?) {
+        byId[id]?.let { byId[id] = it.copy(urgency = urgency, whyItMatters = whyItMatters, clusterId = clusterId) }
     }
 
     override suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String? {
@@ -299,5 +299,53 @@ class NewsRepositoryTest {
         repository.refresh(ticker)
 
         assertEquals(1, widgetUpdater.requested)
+    }
+
+    @Test
+    fun `refresh resolves a shared clusterKey into the same stable clusterId`() = runBlocking {
+        val dao = FakeArticleDao()
+        val registry = NewsSourceRegistry(
+            listOf(
+                FakeNewsSource("finnhub") {
+                    listOf(article("finnhub", "https://a", urgency = null), article("finnhub", "https://b", urgency = null))
+                },
+            ),
+        )
+        val classifier = FakeArticleClassifier(
+            results = mapOf(
+                "finnhub|https://a" to ArticleClassification("hot", "Earnings beat", clusterKey = 1),
+                "finnhub|https://b" to ArticleClassification("hot", "Same story, different outlet", clusterKey = 1),
+            ),
+        )
+        val repository = NewsRepository(dao, registry, classifier)
+
+        repository.refresh(ticker)
+
+        val clusterIds = dao.inserted.map { it.clusterId }.toSet()
+        assertEquals(1, clusterIds.size)
+        assertTrue(clusterIds.single() != null)
+    }
+
+    @Test
+    fun `refresh leaves an unclustered article's clusterId null`() = runBlocking {
+        val dao = FakeArticleDao()
+        val registry = NewsSourceRegistry(listOf(FakeNewsSource("finnhub") { listOf(article("finnhub", "https://a", urgency = null)) }))
+        val classifier = FakeArticleClassifier(results = mapOf("finnhub|https://a" to ArticleClassification("calm", "Routine")))
+        val repository = NewsRepository(dao, registry, classifier)
+
+        repository.refresh(ticker)
+
+        assertNull(dao.inserted.single().clusterId)
+    }
+
+    @Test
+    fun `collapseClusters keeps one representative per clusterId and every unclustered article`() {
+        val clustered1 = article("finnhub", "https://a").copy(clusterId = "group1")
+        val clustered2 = article("google_news_rss", "https://b").copy(clusterId = "group1")
+        val standalone = article("finnhub", "https://c")
+
+        val collapsed = collapseClusters(listOf(clustered1, clustered2, standalone))
+
+        assertEquals(listOf(clustered1, standalone), collapsed)
     }
 }

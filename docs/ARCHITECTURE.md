@@ -118,9 +118,23 @@ Each phase ships something actually usable, not just a milestone.
 5. **Claude comes online** — API key settings screen, per-article urgency
    badge + "why it matters," dedup clustering. Shipped: urgency badge +
    why-it-matters, via one batched Haiku call per ticker per refresh.
-   **Dedup clustering deferred** — needs its own schema (a grouping) and
-   merged-card UI on top of classification; cross-outlet duplicates
-   currently just show as separate cards.
+   **Shipped: dedup clustering** — the same Haiku classification call also
+   returns an optional `cluster` integer per article; `NewsRepository`
+   resolves each batch's local integers into a stable `clusterId` string
+   (the first article id seen for that integer becomes canonical, no
+   UUIDs needed). Scope is deliberately **per classification batch only**
+   — a ticker's ≤20 unclassified articles in one refresh — so a duplicate
+   arriving in a later batch never retroactively clusters with something
+   already classified; there's no cross-batch comparison. Clustering
+   collapses more than just the ticker-detail card: `collapseClusters()`
+   is also applied before notifications (`NewsPollRunner` shows one
+   notification per story, but still calls `markNotified` with every
+   cluster member so an unshown sibling can't resurface alone on a later
+   poll) and before the digest prompt (`DigestRunner`), so a
+   multi-outlet story notifies and digests once, not once per outlet.
+   Ticker detail groups clustered articles into one card (earliest
+   article as the primary headline, others listed as a tappable "Also:
+   outlet · outlet" line) via `ui/tickerdetail/ArticleGroup.kt`.
 6. **Trading-specific depth** — SEC filings feed, earnings-calendar-aware
    alert sensitivity, pre-market digest notification, home-screen widget.
    **Shipped: the SEC filings feed** — `EdgarSource` is just another
@@ -149,8 +163,8 @@ Each phase ships something actually usable, not just a milestone.
    that made notifications skip it. `NewsRepository.refresh()` requests a
    widget update at the end of every refresh, keeping it in sync without
    a separate call site anywhere. All four pieces of this phase are now
-   built; the only thing still deferred anywhere on this roadmap is
-   item 5's dedup clustering, above.
+   built, and with item 5's dedup clustering also shipped, every phase on
+   this roadmap is now built.
 
 ## 5. Stretch ideas (not scheduled)
 

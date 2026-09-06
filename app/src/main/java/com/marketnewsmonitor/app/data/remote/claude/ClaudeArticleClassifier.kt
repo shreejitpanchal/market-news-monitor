@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
-data class ArticleClassification(val urgency: String, val whyItMatters: String)
+data class ArticleClassification(val urgency: String, val whyItMatters: String, val clusterKey: Int? = null)
 
 /** Extracted so [com.marketnewsmonitor.app.repository.NewsRepository] is testable without a real network call. */
 interface ArticleClassifier {
@@ -16,9 +16,10 @@ interface ArticleClassifier {
 
 /**
  * Classifies a batch of a ticker's unclassified articles in one Haiku call —
- * cheaper than one call per article, and the natural unit for a future
- * clustering pass (deferred — see CLAUDE.md) that needs to see them together
- * anyway.
+ * cheaper than one call per article, and the natural unit for dedup
+ * clustering, which needs to see articles together to compare them. Cluster
+ * grouping is scoped to whatever's in this one batch — an article classified
+ * in an earlier call is never retroactively compared against a new one.
  */
 class ClaudeArticleClassifier(
     private val api: ClaudeApi,
@@ -45,7 +46,7 @@ class ClaudeArticleClassifier(
 
         val text = response.content.firstOrNull { it.type == "text" }?.text ?: return emptyMap()
         return parseClassificationResponse(text, json)
-            .associate { it.id to ArticleClassification(it.urgency, it.why) }
+            .associate { it.id to ArticleClassification(it.urgency, it.why, it.cluster) }
     }
 
     companion object {
@@ -55,7 +56,7 @@ class ClaudeArticleClassifier(
 }
 
 @Serializable
-data class ClassificationDto(val id: String, val urgency: String, val why: String)
+data class ClassificationDto(val id: String, val urgency: String, val why: String, val cluster: Int? = null)
 
 /** Pure, kept separate from [ClaudeArticleClassifier.classify] so it's testable without a network call. */
 fun buildClassificationPrompt(ticker: Ticker, articles: List<Article>): String {
@@ -71,13 +72,20 @@ fun buildClassificationPrompt(ticker: Ticker, articles: List<Article>): String {
         - "${Urgency.WARM}": relevant but not urgent (analyst notes, minor product news, sector commentary)
         - "${Urgency.CALM}": routine or low-relevance (recaps, opinion pieces, unrelated mentions)
 
+        Some of these articles may be different outlets reporting the SAME
+        underlying story (e.g. one wire headline picked up by multiple
+        sources). If two or more articles clearly describe the same story,
+        give them the same "cluster" integer (starting from 1). Leave
+        "cluster" as null for a standalone story, or if you're not sure —
+        don't force a match.
+
         Articles:
         [
         $articlesJson
         ]
 
         Respond with ONLY a JSON array, no other text, no markdown fences:
-        [{"id": "...", "urgency": "hot|warm|calm", "why": "..."}]
+        [{"id": "...", "urgency": "hot|warm|calm", "why": "...", "cluster": null}]
     """.trimIndent()
 }
 

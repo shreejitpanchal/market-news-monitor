@@ -17,7 +17,8 @@ now fully built** (SEC filings, earnings-aware sensitivity, pre-market
 digest, home-screen widget — see Roadmap below), plus a Settings
 export/import feature added ahead of its normal schedule because
 export/import needed somewhere to store the Claude and Finnhub API keys.
-Only Phase 4's deferred dedup clustering remains anywhere on the roadmap.
+Phase 4's previously-deferred dedup clustering is now built too — every
+phase on the roadmap is now implemented.
 **Still not build-verified** — `gradle/wrapper/gradle-wrapper.jar` is
 now checked in (generated 2026-09-06 via a local Gradle 8.9 install) and
 `./gradlew -v` runs, but no actual `./gradlew test`/`assembleDebug` (via
@@ -84,14 +85,25 @@ build/test run comes back clean.
   inserted and are visible in ticker detail — they just never notify.
   See `NewsPollRunner.NOTIFICATION_FRESHNESS_WINDOW_MILLIS`.
 - **Dedup clustering (near-duplicate stories from different outlets
-  merged into one card) is deferred, not built.** Phase 4 shipped urgency
-  + "why it matters" only — Finnhub/Google News RSS already dedup by
-  exact URL, so cross-outlet duplicates just show as separate cards for
-  now. Clustering needs its own schema (a grouping) and merged-card UI;
-  don't assume it exists just because classification does.
+  merged into one card) is built, scoped to a single classification
+  batch.** The same Haiku call that assigns urgency also returns an
+  optional per-article `cluster` integer; `NewsRepository` turns each
+  batch's local integers into a stable `clusterId` string (first article
+  id seen for that integer wins, no UUIDs). Deliberately **no
+  cross-batch comparison** — a duplicate arriving in a later refresh's
+  batch never retroactively merges with one already classified, since
+  Claude can only cluster articles it sees together in one call. Beyond
+  the ticker-detail merged card, clustering also **collapses
+  notifications and the digest**: `collapseClusters()` picks one
+  representative article per `clusterId`, used before
+  `ArticleNotifier.notifyNewArticles` and before the digest prompt, so a
+  multi-outlet story notifies/digests once — but `markNotified` is
+  always called with the *full*, uncollapsed list, or an unshown cluster
+  sibling would resurface alone once its notified sibling drops off the
+  "unnotified" query.
 - **Classification is batched per ticker per refresh (one Haiku call for
   every unclassified article), not one call per article.** Cheaper, and
-  the natural unit for the deferred clustering pass above, which needs to
+  the natural unit for the clustering pass above, which needs to
   see articles together anyway. Capped at
   `ClaudeArticleClassifier.MAX_ARTICLES_PER_CALL` (20) per call; a bigger
   backlog is picked up over subsequent polls rather than one unbounded
@@ -245,7 +257,7 @@ here as each phase actually lands:
 - [x] Phase 1 — watchlist CRUD, no live news yet (unverified — see Status above)
 - [x] Phase 2 — live news feed (Finnhub + Google News RSS) (unverified — see Status above)
 - [x] Phase 3 — background alerts (WorkManager + notifications) (unverified — see Status above)
-- [x] Phase 4 — Claude integration (classification, urgency badges) (unverified — see Status above; dedup clustering deferred)
+- [x] Phase 4 — Claude integration (classification, urgency badges, dedup clustering) (unverified — see Status above)
 - [x] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget) (unverified — see Status above)
   - [x] SEC filings feed (EDGAR 8-K/Form 4 via the existing news registry) (unverified — see Status above)
   - [x] Earnings-calendar-aware alert sensitivity (unverified — see Status above; also added the missing baseline urgency gate)

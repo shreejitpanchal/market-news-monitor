@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.marketnewsmonitor.app.data.local.entity.Article
 import com.marketnewsmonitor.app.ui.components.UrgencyBadge
 import java.text.DateFormat
 import java.util.Date
@@ -45,6 +44,10 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
     val context = LocalContext.current
 
     LaunchedEffect(symbol) { viewModel.refresh() }
+
+    fun openUrl(url: String) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
@@ -95,14 +98,13 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
                 Text("No articles yet — tap refresh to fetch news for $symbol.")
             }
         } else {
+            val groups = groupArticlesForDisplay(articles)
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(articles, key = { it.id }) { article ->
-                    ArticleRow(article) {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(article.url)))
-                    }
+                items(groups, key = { it.primary.id }) { group ->
+                    ArticleGroupRow(group, onOpenUrl = ::openUrl)
                 }
             }
         }
@@ -110,8 +112,9 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
 }
 
 @Composable
-private fun ArticleRow(article: Article, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+private fun ArticleGroupRow(group: ArticleGroup, onOpenUrl: (String) -> Unit) {
+    val article = group.primary
+    Card(modifier = Modifier.fillMaxWidth().clickable { onOpenUrl(article.url) }) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 UrgencyBadge(article.urgency)
@@ -122,6 +125,19 @@ private fun ArticleRow(article: Article, onClick: () -> Unit) {
                 "${article.sourceId} · ${DateFormat.getDateInstance().format(Date(article.publishedAt))}",
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (group.alsoReportedBy.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Also:", style = MaterialTheme.typography.bodySmall)
+                    group.alsoReportedBy.forEachIndexed { index, other ->
+                        if (index > 0) Text("·", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            other.sourceId,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.clickable { onOpenUrl(other.url) },
+                        )
+                    }
+                }
+            }
         }
     }
 }

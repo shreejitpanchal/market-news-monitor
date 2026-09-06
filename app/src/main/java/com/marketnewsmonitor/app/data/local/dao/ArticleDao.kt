@@ -31,8 +31,8 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE tickerSymbol = :symbol AND urgency IS NULL ORDER BY publishedAt DESC LIMIT :limit")
     suspend fun getUnclassified(symbol: String, limit: Int): List<Article>
 
-    @Query("UPDATE articles SET urgency = :urgency, whyItMatters = :whyItMatters WHERE id = :id")
-    suspend fun updateClassification(id: String, urgency: String, whyItMatters: String)
+    @Query("UPDATE articles SET urgency = :urgency, whyItMatters = :whyItMatters, clusterId = :clusterId WHERE id = :id")
+    suspend fun updateClassification(id: String, urgency: String, whyItMatters: String, clusterId: String?)
 
     /** Highest-severity urgency among a ticker's articles published inside the window, or null if none classified yet. */
     @Query(

@@ -5,6 +5,7 @@ import com.marketnewsmonitor.app.data.notifications.ArticleNotifier
 import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
+import com.marketnewsmonitor.app.repository.collapseClusters
 import java.util.concurrent.TimeUnit
 
 /**
@@ -34,7 +35,13 @@ class NewsPollRunner(
                     NOTIFICATION_FRESHNESS_WINDOW_MILLIS,
                     allowedUrgencies,
                 )
-                if (eligible.isNotEmpty() && notifier.notifyNewArticles(ticker, eligible)) {
+                // One representative per story in the notification itself, but
+                // markNotified takes the full uncollapsed set — every cluster
+                // member has to be marked together, or the unshown member would
+                // resurface alone once its now-notified sibling drops out of the
+                // "unnotified" query on a later poll.
+                val toShow = collapseClusters(eligible)
+                if (toShow.isNotEmpty() && notifier.notifyNewArticles(ticker, toShow)) {
                     newsRepository.markNotified(eligible)
                 }
             } catch (e: Exception) {

@@ -47,7 +47,7 @@ private class FakeArticleDao(initial: List<Article> = emptyList()) : ArticleDao 
     override suspend fun getUnnotifiedSince(symbol: String, sinceMillis: Long): List<Article> = emptyList()
     override suspend fun markNotified(ids: List<String>) {}
     override suspend fun getUnclassified(symbol: String, limit: Int): List<Article> = emptyList()
-    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String) {}
+    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String, clusterId: String?) {}
     override suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String? = null
     override fun observeUrgenciesSince(sinceMillis: Long): Flow<List<TickerUrgency>> = MutableStateFlow(emptyList())
 
@@ -137,5 +137,20 @@ class DigestRunnerTest {
         DigestRunner(TickerRepository(tickerDao), newsRepository, generator, notifier).run()
 
         assertTrue(notifier.notified == null)
+    }
+
+    @Test
+    fun `collapses clustered notable articles before they reach the digest prompt`() = runBlocking {
+        val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L)))
+        val clustered = article("AAPL", Urgency.HOT).copy(id = "a1", clusterId = "a1")
+        val sibling = article("AAPL", Urgency.HOT).copy(id = "a2", clusterId = "a1")
+        val articleDao = FakeArticleDao(listOf(clustered, sibling))
+        val newsRepository = NewsRepository(articleDao, NewsSourceRegistry(emptyList()), NoopArticleClassifier())
+        val generator = FakeDigestGenerator()
+        val notifier = FakeDigestNotifier()
+
+        DigestRunner(TickerRepository(tickerDao), newsRepository, generator, notifier).run()
+
+        assertEquals(1, generator.lastInput!!.values.first().size)
     }
 }
