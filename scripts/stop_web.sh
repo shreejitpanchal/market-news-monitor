@@ -20,9 +20,12 @@ stop_port() {
     fi
     for pid in $pids; do
         echo "Stopping $name (port $port, PID $pid)..."
-        # MSYS_NO_PATHCONV belt-and-suspenders alongside the doubled
-        # slashes -- see run_web.sh's comment on the same class of bug.
-        MSYS_NO_PATHCONV=1 taskkill //PID "$pid" //F >/dev/null 2>&1 || echo "  could not stop PID $pid (already gone?)"
+        # MSYS_NO_PATHCONV=1 disables git-bash's path-mangling of "/PID"/"/F"
+        # (see run_web.sh's comment on the same bug class) -- doubled
+        # slashes are a DIFFERENT, alternative workaround that relies on
+        # path-conversion staying on; combining both left taskkill seeing
+        # the literal string "//PID", which it doesn't recognize.
+        MSYS_NO_PATHCONV=1 taskkill /PID "$pid" /F >/dev/null 2>&1 || echo "  could not stop PID $pid (already gone?)"
     done
 }
 
