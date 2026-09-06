@@ -18,10 +18,12 @@ digest, home-screen widget — see Roadmap below), plus a Settings
 export/import feature added ahead of its normal schedule because
 export/import needed somewhere to store the Claude and Finnhub API keys.
 Only Phase 4's deferred dedup clustering remains anywhere on the roadmap.
-**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked
-in (see Commands below), so no `./gradlew` command has actually been run
-against this code yet. Don't treat the roadmap checkboxes as "tested and
-working" until that first build/test run comes back clean.
+**Still not build-verified** — `gradle/wrapper/gradle-wrapper.jar` is
+now checked in (generated 2026-09-06 via a local Gradle 8.9 install) and
+`./gradlew -v` runs, but no actual `./gradlew test`/`assembleDebug` (via
+`scripts/dev.sh all`) has been run against this code yet. Don't treat
+the roadmap checkboxes as "tested and working" until that first real
+build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -258,7 +260,15 @@ Key tasks: `build` (`./gradlew assembleDebug`, copies the APK to `dist/`),
 `vet` (`./gradlew lint`), `test` (`./gradlew test`), `cov` (Jacoco),
 `all` = build+vet+test, `full` = all+cov+graphify.
 
-**Before any of this works**, `gradle/wrapper/gradle-wrapper.jar` has to
-exist — it's a compiled binary that can't be checked in by an agent
-writing text files, so it isn't committed yet. Open the project in Android
-Studio once (regenerates it on sync) or run `gradle wrapper` locally.
+`build_apk.sh` (repo root) is a thin convenience wrapper around
+`scripts/dev.sh build` for producing a debug APK to sideload manually —
+it doesn't reimplement the Gradle invocation, so `scripts/dev.sh`
+remains the only place that actually knows how to build this repo.
+
+`gradle/wrapper/gradle-wrapper.jar` is checked in and `./gradlew` works
+— it had to be generated via a real local Gradle install (an agent
+writing text files can't produce a compiled binary), which also fixed
+a duplicate-`shift` bug in the hand-authored `gradlew` that predated
+the real jar. If the wrapper ever needs regenerating (e.g. bumping the
+Gradle version), that's still a real Gradle install + `gradle wrapper
+--gradle-version <version>`, not something to hand-author again.
