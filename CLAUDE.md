@@ -169,11 +169,16 @@ first real run comes back clean.
   change intra-day, and the daily cap is tight. Fixed 3-month lookback,
   `outputsize=compact`, no range picker — deliberately minimal scope,
   matching this app's other short time horizons (7-day news lookback,
-  24h notification freshness). `PriceChart` is a simple line chart of
-  daily closes, hand-drawn with Compose `Canvas` — no charting library
-  dependency, no axes/gridlines, just the line plus a min/max/date-range
-  caption. Same silent-empty-result convention as every other optional
-  API integration: no key, a rate-limited/invalid-key response (Alpha
+  24h notification freshness). `PriceChart` is hand-drawn with Compose
+  `Canvas` — still no charting library dependency — but is a real chart,
+  not just a bare line: Y-axis gridlines + price labels, X-axis date
+  labels (first/mid/last point), a filled area under the close line, and
+  volume bars (from the same Alpha Vantage response's `"5. volume"`
+  field — no extra API call) underneath. Tapping the chart shows a
+  crosshair + tooltip for that point's date/price/volume, tracked as
+  local `selectedIndex` state reset whenever `points` changes. Same
+  silent-empty-result convention as every other optional API
+  integration: no key, a rate-limited/invalid-key response (Alpha
   Vantage omits `"Time Series (Daily)"` and returns a `"Note"`/
   `"Information"` string instead), or a network error all mean no chart
   renders — never an error banner.

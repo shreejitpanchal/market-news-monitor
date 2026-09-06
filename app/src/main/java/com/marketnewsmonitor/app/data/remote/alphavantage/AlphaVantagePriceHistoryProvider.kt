@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-data class PricePoint(val date: LocalDate, val close: Double)
+data class PricePoint(val date: LocalDate, val close: Double, val volume: Long = 0L)
 
 /** Extracted so [com.marketnewsmonitor.app.ui.tickerdetail.TickerDetailViewModel] is testable without a real network call. */
 interface PriceHistoryProvider {
@@ -54,6 +54,7 @@ fun mapAlphaVantageDailyResponse(response: AlphaVantageDailyResponse, cutoffDate
                 return@mapNotNull null
             }
             val close = bar.close.toDoubleOrNull() ?: return@mapNotNull null
-            if (date.isBefore(cutoffDate)) null else PricePoint(date, close)
+            val volume = bar.volume.toLongOrNull() ?: 0L
+            if (date.isBefore(cutoffDate)) null else PricePoint(date, close, volume)
         }
         .sortedBy { it.date }

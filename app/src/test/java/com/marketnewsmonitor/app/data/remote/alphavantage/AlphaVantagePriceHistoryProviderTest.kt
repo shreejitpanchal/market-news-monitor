@@ -86,6 +86,21 @@ class AlphaVantagePriceHistoryProviderTest {
     }
 
     @Test
+    fun `mapAlphaVantageDailyResponse parses volume, defaulting to 0 when unparsable`() {
+        val response = AlphaVantageDailyResponse(
+            mapOf(
+                "2024-01-25" to AlphaVantageDailyBar(close = "150.25", volume = "1234567"),
+                "2024-01-26" to AlphaVantageDailyBar(close = "151.00", volume = "not-a-number"),
+            ),
+        )
+
+        val points = mapAlphaVantageDailyResponse(response, LocalDate.MIN).associateBy { it.date }
+
+        assertEquals(1_234_567L, points.getValue(LocalDate.parse("2024-01-25")).volume)
+        assertEquals(0L, points.getValue(LocalDate.parse("2024-01-26")).volume)
+    }
+
+    @Test
     fun `mapAlphaVantageDailyResponse sorts ascending by date`() {
         val response = AlphaVantageDailyResponse(
             mapOf(

@@ -25,4 +25,5 @@ data class AlphaVantageDailyResponse(
 @Serializable
 data class AlphaVantageDailyBar(
     @SerialName("4. close") val close: String = "",
+    @SerialName("5. volume") val volume: String = "",
 )
