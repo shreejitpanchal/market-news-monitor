@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -30,10 +33,11 @@ fun ProfileOnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modifie
     val importStatus by viewModel.importStatus.collectAsState()
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
-    ) { uri: Uri? -> uri?.let { viewModel.importSetup(it, onComplete) } }
+    ) { uri: Uri? -> uri?.let { pendingImportUri = it } }
 
     val emailValid = isValidProfileEmail(email)
 
@@ -98,5 +102,33 @@ fun ProfileOnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modifie
         (importStatus as? OnboardingImportStatus.Error)?.let {
             Text(it.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
+    }
+
+    pendingImportUri?.let { uri ->
+        var password by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text("Backup password") },
+            text = {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.importSetup(uri, password, onComplete)
+                        pendingImportUri = null
+                    },
+                    enabled = password.isNotBlank(),
+                ) { Text("Import") }
+            },
+            dismissButton = { TextButton(onClick = { pendingImportUri = null }) { Text("Cancel") } },
+        )
     }
 }

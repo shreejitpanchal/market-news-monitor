@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.security.GeneralSecurityException
 
 sealed interface OnboardingImportStatus {
     data object Idle : OnboardingImportStatus
@@ -37,11 +38,11 @@ class ProfileOnboardingViewModel(
      * Restoring a backup fills in name/email from the export, satisfying the
      * same mandatory gate this screen otherwise enforces via typed input.
      */
-    fun importSetup(uri: Uri, onComplete: () -> Unit) {
+    fun importSetup(uri: Uri, password: String, onComplete: () -> Unit) {
         _importStatus.value = OnboardingImportStatus.Importing
         viewModelScope.launch {
             try {
-                backupRepository.importFrom(uri)
+                backupRepository.importFrom(uri, password)
                 if (appPreferences.hasCompletedProfile) {
                     _importStatus.value = OnboardingImportStatus.Idle
                     onComplete()
@@ -49,6 +50,8 @@ class ProfileOnboardingViewModel(
                     _importStatus.value =
                         OnboardingImportStatus.Error("That backup didn't include a name and email — enter them below.")
                 }
+            } catch (e: GeneralSecurityException) {
+                _importStatus.value = OnboardingImportStatus.Error("Import failed: incorrect password or corrupted file.")
             } catch (e: Exception) {
                 _importStatus.value = OnboardingImportStatus.Error("Import failed: ${e.message}")
             }
