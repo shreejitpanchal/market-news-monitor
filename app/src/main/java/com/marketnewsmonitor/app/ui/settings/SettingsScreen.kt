@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.marketnewsmonitor.app.BuildConfig
 import com.marketnewsmonitor.app.data.settings.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -81,7 +84,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     ) { uri -> uri?.let { pendingImportUri = it } }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         UserProfileFields(
@@ -103,6 +106,11 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             storedValue = finnhubApiKey,
             onSave = viewModel::saveFinnhubApiKey,
             helperText = "Free tier at finnhub.io — needed for company news on the ticker detail screen.",
+        )
+
+        Text(
+            "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+            style = MaterialTheme.typography.bodySmall,
         )
 
         HorizontalDivider()
