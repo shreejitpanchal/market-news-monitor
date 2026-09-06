@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "market-news-monitor"
 include(":app")
+include(":webapp")

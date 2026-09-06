@@ -34,7 +34,27 @@ first real run comes back clean.
 - **Platform:** native Kotlin + Jetpack Compose, not Flutter/React Native.
   No iOS target planned, so there's no cross-platform tax worth paying —
   full access to WorkManager, notification channels, and home-screen
-  widgets matters more here than portability.
+  widgets matters more here than portability. This still holds for the
+  real app — see the `webapp/` module below, which does not reopen it.
+- **`webapp/` is a Chrome-viewable UI preview, not a second production
+  target.** Added when the user wanted to look at screens locally without
+  installing to a phone/emulator. It's a separate Compose Multiplatform
+  (`wasmJs`) module, additive and isolated from `app/` — no shared code,
+  since `app`'s Composables are `androidx.compose.*` (Android-only) and
+  Compose Multiplatform is `org.jetbrains.compose.*`, different artifacts.
+  Deliberately **sample data only, nothing real**: `WorkManager`/
+  notifications/the Glance widget have no browser equivalent (dropped
+  per explicit instruction); `Room` and `Retrofit` don't run on `wasmJs`;
+  and calling Finnhub/Alpha Vantage/EDGAR/Claude directly from a browser
+  tab would either hit CORS or require putting API keys in browser
+  JS/localStorage, visible in devtools — a real security regression, not
+  just extra work, so it was rejected rather than attempted. Run it with
+  `scripts/run_web.ps1` (or `.sh`) — a dedicated launcher script alongside
+  `dev.sh`/`dev.ps1`, same relationship `build_apk.sh` has to `dev.sh`,
+  not a `dev.sh` task, since it starts a long-running dev server rather
+  than a one-shot gate. Don't wire real data into this module without
+  first reconsidering the CORS/key-exposure problem above — it wasn't
+  skipped by accident.
 - **AI integration is a Claude API key, not subscription auth.** Reusing a
   Claude.ai Pro/Max login isn't a supported integration path for
   third-party apps — Anthropic doesn't expose that as an API. Don't
@@ -339,6 +359,10 @@ Key tasks: `build` (`./gradlew assembleDebug`, copies the APK to `dist/`),
 `scripts/dev.sh build` for producing a debug APK to sideload manually —
 it doesn't reimplement the Gradle invocation, so `scripts/dev.sh`
 remains the only place that actually knows how to build this repo.
+
+`scripts/run_web.ps1` / `run_web.sh` start the `webapp/` sample-data
+Chrome preview's dev server and open it in Chrome — see the `webapp/`
+decision above for what it is and, importantly, isn't.
 
 `gradle/wrapper/gradle-wrapper.jar` is checked in and `./gradlew` works
 — it had to be generated via a real local Gradle install (an agent
