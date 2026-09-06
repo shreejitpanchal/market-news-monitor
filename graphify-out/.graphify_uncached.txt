@@ -1,0 +1,4 @@
+C:\Development\market-news-monitor\.claude\commands\verify.md
+C:\Development\market-news-monitor\CLAUDE.md
+C:\Development\market-news-monitor\README.md
+C:\Development\market-news-monitor\docs\ARCHITECTURE.md
