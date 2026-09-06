@@ -11,6 +11,12 @@
 // self-signed dev cert. If the cert files are missing (fresh clone, never
 // ran gen_dev_cert.sh), falls back to plain HTTP rather than failing to
 // start at all.
+//
+// open is deliberately false: run_web.ps1/.sh already open Chrome
+// themselves at the correct https:// URL once the port is confirmed
+// ready. Leaving webpack's own auto-open on too raced a second tab that
+// doesn't reliably pick up the server.type=https override above, which
+// is why the page was loading over http instead of https.
 const fs = require("fs");
 const path = require("path");
 
@@ -21,7 +27,7 @@ const certPath = path.join(certDir, "localhost-cert.pem");
 config.devServer = {
     ...config.devServer,
     port: 19001,
-    open: true,
+    open: false,
 };
 
 if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
