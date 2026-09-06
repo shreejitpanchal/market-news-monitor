@@ -18,6 +18,9 @@ interface ClaudeApi {
         const val BASE_URL = "https://api.anthropic.com/"
         const val ANTHROPIC_VERSION = "2023-06-01"
         const val MODEL_HAIKU = "claude-haiku-4-5-20251001"
+        // Output quality across the whole watchlist matters more than per-call
+        // cost for the once-a-day digest — the one place this app uses Sonnet.
+        const val MODEL_SONNET = "claude-sonnet-5"
     }
 }
 

@@ -8,17 +8,18 @@ trading decision — not another headline aggregator.
 
 **Phases 0–4 (scaffold, watchlist CRUD, live news feed, background
 alerts, and Claude urgency classification) are written, plus the SEC
-filings and earnings-aware sensitivity slices of Phase 5**, plus a
-Settings export/import feature — see [CLAUDE.md](CLAUDE.md) and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full plan. Dedup
-clustering (Phase 4's third piece) and the rest of Phase 5 (pre-market
-digest, widget) are deferred — see ARCHITECTURE.md. Notifications now
-only fire for `hot`-classified articles (or `warm` too within a day of
-earnings) — previously any new article notified regardless of urgency.
-**Not yet verified**: `gradle/wrapper/gradle-wrapper.jar` still needs to
-be generated (open the project in Android Studio, or run `gradle
-wrapper` locally) before `./scripts/dev.sh all` can actually build it —
-see "Getting started" below.
+filings, earnings-aware sensitivity, and pre-market digest slices of
+Phase 5**, plus a Settings export/import feature — see
+[CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for the full plan. Dedup clustering (Phase 4's third piece) and the
+home-screen widget (Phase 5's last piece) are deferred — see
+ARCHITECTURE.md. Notifications now only fire for `hot`-classified
+articles (or `warm` too within a day of earnings) — previously any new
+article notified regardless of urgency. **Not yet verified**:
+`gradle/wrapper/gradle-wrapper.jar` still needs to be generated (open the
+project in Android Studio, or run `gradle wrapper` locally) before
+`./scripts/dev.sh all` can actually build it — see "Getting started"
+below.
 
 ## Who it's for
 
@@ -41,6 +42,9 @@ through news noise, not as a product for distribution.
 - **Background alerts** — a periodic on-device check that fires a local
   notification when something on your watchlist actually matters, even
   with the app closed. No backend server.
+- **Pre-market digest** — an optional once-a-day, 8 AM summary of your
+  whole watchlist's notable news, written by Claude Sonnet. Off by
+  default; skipped on days with nothing worth summarizing.
 
 Full phased roadmap, data-source choices, and the architecture reasoning
 behind them live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

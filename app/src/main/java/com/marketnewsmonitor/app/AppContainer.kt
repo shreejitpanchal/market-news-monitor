@@ -7,6 +7,8 @@ import com.marketnewsmonitor.app.data.notifications.NotificationHelper
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ClaudeApi
 import com.marketnewsmonitor.app.data.remote.claude.ClaudeArticleClassifier
+import com.marketnewsmonitor.app.data.remote.claude.ClaudeDigestGenerator
+import com.marketnewsmonitor.app.data.remote.claude.DigestGenerator
 import com.marketnewsmonitor.app.data.remote.edgar.EdgarApi
 import com.marketnewsmonitor.app.data.remote.edgar.EdgarSource
 import com.marketnewsmonitor.app.data.remote.edgar.buildEdgarUserAgent
@@ -77,4 +79,6 @@ class AppContainer(context: Context) {
 
     val earningsCalendarProvider: EarningsCalendarProvider =
         FinnhubEarningsCalendarProvider(finnhubApi) { secureSettingsStore.getFinnhubApiKey() }
+
+    val digestGenerator: DigestGenerator = ClaudeDigestGenerator(claudeApi) { secureSettingsStore.getClaudeApiKey() }
 }

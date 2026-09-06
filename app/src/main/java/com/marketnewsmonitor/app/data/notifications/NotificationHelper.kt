@@ -22,7 +22,7 @@ import com.marketnewsmonitor.app.data.local.entity.Ticker
  * spam notifications. Tapping opens the app to the Dashboard; no deep link
  * to the specific ticker in this phase.
  */
-class NotificationHelper(private val context: Context) : ArticleNotifier {
+class NotificationHelper(private val context: Context) : ArticleNotifier, DigestNotifier {
 
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -65,6 +65,31 @@ class NotificationHelper(private val context: Context) : ArticleNotifier {
         return true
     }
 
+    override fun notifyDigest(text: String): Boolean {
+        if (text.isBlank() || !hasPostPermission()) return false
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            DIGEST_NOTIFICATION_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Pre-market digest")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(DIGEST_NOTIFICATION_ID, notification)
+        return true
+    }
+
     private fun hasPostPermission(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -72,5 +97,9 @@ class NotificationHelper(private val context: Context) : ArticleNotifier {
 
     companion object {
         const val CHANNEL_ID = "news_alerts"
+
+        // A fixed sentinel, distinct from any ticker.symbol.hashCode() used by
+        // per-ticker notifications, since there's only ever one digest at a time.
+        private const val DIGEST_NOTIFICATION_ID = Int.MIN_VALUE
     }
 }

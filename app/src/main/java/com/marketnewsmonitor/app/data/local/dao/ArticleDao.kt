@@ -44,6 +44,14 @@ interface ArticleDao {
     /** Reactive, all-tickers version of [getLatestUrgency] — Dashboard badges update live as classification completes. */
     @Query("SELECT tickerSymbol, urgency FROM articles WHERE urgency IS NOT NULL AND publishedAt >= :sinceMillis")
     fun observeUrgenciesSince(sinceMillis: Long): Flow<List<TickerUrgency>>
+
+    /**
+     * Unlike [getUnnotifiedSince], not filtered by `notified` — the daily
+     * digest re-summarizes anything notable in the window, even articles
+     * already individually notified.
+     */
+    @Query("SELECT * FROM articles WHERE tickerSymbol = :symbol AND urgency IN (:urgencies) AND publishedAt >= :sinceMillis ORDER BY publishedAt DESC")
+    suspend fun getRecentByUrgencies(symbol: String, sinceMillis: Long, urgencies: List<String>): List<Article>
 }
 
 data class TickerUrgency(val tickerSymbol: String, val urgency: String)

@@ -90,8 +90,11 @@ Two models, split by cost profile, not arbitrarily:
   (after de-dup against Room). Classifies urgency (hot/warm/calm), writes
   a one-line "why this might move the stock," and clusters near-duplicate
   stories from different outlets into one card.
-- **Sonnet** — runs once a day for the pre-market digest, where output
-  quality across the whole watchlist matters more than per-call cost.
+- **Sonnet** — runs once a day (fixed 8:00 AM device-local time, no
+  Settings picker) for the pre-market digest, where output quality
+  across the whole watchlist matters more than per-call cost. Covers
+  only hot/warm articles from the last 24h; silently skipped (no Sonnet
+  call, no notification) on a day with nothing notable. Off by default.
 
 The API key is entered once in Settings, stored in
 `EncryptedSharedPreferences` (backed by the Android Keystore), and never
@@ -129,8 +132,13 @@ Each phase ships something actually usable, not just a milestone.
    said), so that baseline gate was added at the same time: only `hot`
    notifies by default, and `warm` also notifies within ±1 day of a
    ticker's earnings date (via Finnhub's earnings-calendar endpoint, same
-   key as company news). The remaining two pieces (pre-market digest,
-   widget) are still unbuilt.
+   key as company news).
+   **Shipped: the pre-market digest** — `DigestWorker`, a second
+   independent `WorkManager` job (combined with the news poll worker via
+   `DelegatingWorkerFactory`), fires at a fixed 8:00 AM device-local time
+   and asks Sonnet for a short summary of the whole watchlist's hot/warm
+   news from the last 24h; skipped entirely when nothing's notable. Off
+   by default. Only the home-screen widget is still unbuilt.
 
 ## 5. Stretch ideas (not scheduled)
 

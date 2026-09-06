@@ -28,6 +28,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_USER_EMAIL, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_USER_EMAIL, value).apply()
 
+    /** Daily pre-market digest, fixed 8:00 AM device-local time (see DigestScheduler). Off by default. */
+    var digestEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DIGEST_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_DIGEST_ENABLED, value).apply()
+
     companion object {
         // WorkManager's own floor for periodic work.
         const val DEFAULT_POLL_INTERVAL_MINUTES = 15L
@@ -38,5 +43,6 @@ class AppPreferences(context: Context) {
         private const val KEY_POLL_INTERVAL_MINUTES = "poll_interval_minutes"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_DIGEST_ENABLED = "digest_enabled"
     }
 }

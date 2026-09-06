@@ -63,6 +63,9 @@ private class FakeArticleDao : ArticleDao {
                 .filter { it.urgency != null && it.publishedAt >= sinceMillis }
                 .map { TickerUrgency(it.tickerSymbol, it.urgency!!) },
         )
+
+    override suspend fun getRecentByUrgencies(symbol: String, sinceMillis: Long, urgencies: List<String>): List<Article> =
+        byId.values.filter { it.tickerSymbol == symbol && it.urgency in urgencies && it.publishedAt >= sinceMillis }
 }
 
 private class FakeNewsSource(override val id: String, private val result: () -> List<Article>) : NewsSource {

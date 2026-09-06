@@ -46,15 +46,30 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val userEmail by viewModel.userEmail.collectAsState()
     val pollingEnabled by viewModel.pollingEnabled.collectAsState()
     val pollIntervalMinutes by viewModel.pollIntervalMinutes.collectAsState()
+    val digestEnabled by viewModel.digestEnabled.collectAsState()
     val status by viewModel.status.collectAsState()
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
     var notificationDenied by remember { mutableStateOf(false) }
+    var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    // Shared by both notification-producing toggles below (polling, digest) —
+    // each sets pendingPermissionAction before launching, so one launcher/
+    // callback pair handles requesting POST_NOTIFICATIONS for either.
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         notificationDenied = !granted
-        viewModel.setPollingEnabled(true)
+        pendingPermissionAction?.invoke()
+        pendingPermissionAction = null
+    }
+
+    fun enableWithPermissionIfNeeded(enable: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingPermissionAction = enable
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            enable()
+        }
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -97,10 +112,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             Switch(
                 checked = pollingEnabled,
                 onCheckedChange = { enabled ->
-                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    if (enabled) {
+                        enableWithPermissionIfNeeded { viewModel.setPollingEnabled(true) }
                     } else {
-                        viewModel.setPollingEnabled(enabled)
+                        viewModel.setPollingEnabled(false)
                     }
                 },
             )
@@ -108,7 +123,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
         if (notificationDenied) {
             Text(
-                "Notification permission denied — polling still runs, but you won't see alerts until it's granted.",
+                "Notification permission denied — this still runs, but you won't see alerts until it's granted.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -121,6 +136,28 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                     label = { Text("${minutes}m") },
                 )
             }
+        }
+
+        HorizontalDivider()
+
+        Text("Daily pre-market digest", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "One Claude Sonnet summary of hot/warm news across your whole watchlist, " +
+                "fixed at 8:00 AM local time. Skipped entirely on days with nothing notable.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Switch(
+                checked = digestEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled) {
+                        enableWithPermissionIfNeeded { viewModel.setDigestEnabled(true) }
+                    } else {
+                        viewModel.setDigestEnabled(false)
+                    }
+                },
+            )
+            Text(if (digestEnabled) "On" else "Off")
         }
 
         HorizontalDivider()

@@ -12,15 +12,16 @@ no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
 **Current status: Phase 0 (scaffold) through Phase 4 (Claude
-classification) are written, plus the SEC filings and earnings-aware
-sensitivity slices of Phase 5** ("trading-specific depth" — the other two
-pieces, pre-market digest/widget, are still unbuilt; see Roadmap below),
-plus a Settings export/import feature added ahead of its normal schedule
-because export/import needed somewhere to store the Claude and Finnhub
-API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't
-checked in (see Commands below), so no `./gradlew` command has actually
-been run against this code yet. Don't treat the roadmap checkboxes as
-"tested and working" until that first build/test run comes back clean.
+classification) are written, plus the SEC filings, earnings-aware
+sensitivity, and pre-market digest slices of Phase 5** ("trading-specific
+depth" — only the home-screen widget is still unbuilt; see Roadmap
+below), plus a Settings export/import feature added ahead of its normal
+schedule because export/import needed somewhere to store the Claude and
+Finnhub API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar`
+isn't checked in (see Commands below), so no `./gradlew` command has
+actually been run against this code yet. Don't treat the roadmap
+checkboxes as "tested and working" until that first build/test run comes
+back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -125,6 +126,22 @@ been run against this code yet. Don't treat the roadmap checkboxes as
   Fails closed to the stricter baseline on any error, never open. Don't
   change the ±1 day window or the hot/warm split without deciding it's
   worth the same deliberation as the freshness window above.
+- **The pre-market digest is fixed at 8:00 AM device-local time, no
+  Settings time picker.** Covers only hot/warm articles from the last
+  24h across the whole (unmuted) watchlist — same urgency philosophy as
+  everywhere else — and is silently skipped (no Sonnet call, no
+  notification) on a day with nothing notable, rather than sending an
+  empty digest. Off by default (`AppPreferences.digestEnabled`); a new
+  unsolicited daily notification shouldn't be forced on everyone.
+- **This is the only place the app calls Claude Sonnet** (`ClaudeApi.
+  MODEL_SONNET`) — everything else uses Haiku. Don't switch the digest to
+  Haiku or the per-article classifier to Sonnet without revisiting the
+  cost-split reasoning in Architecture below.
+- **Two `WorkManager` jobs, two `WorkerFactory`s, combined with
+  `DelegatingWorkerFactory`** (`MarketNewsMonitorApp.
+  getWorkManagerConfiguration`) rather than one factory branching on
+  worker type — adding a third scheduled job later means adding a third
+  factory, not editing the existing two.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -151,12 +168,13 @@ making a structural change. Summary:
   `ExecutionEngine` per language. Adding a data source later (a paid
   feed, options flow) means adding one class, not branching inside a
   shared fetcher.
-- **WorkManager** runs a periodic worker, fetching new articles for
-  watchlisted tickers, diffing against Room, classifying only the *new*
-  ones with Claude Haiku, and firing a local notification for anything
-  flagged urgent. Both the interval and whether this job runs at all are
-  user-controlled from Settings (see above) — this is not a fixed,
-  always-on job.
+- **WorkManager** runs two independent periodic jobs, each its own
+  on/off Settings toggle — neither is fixed/always-on: `NewsPollWorker`
+  fetches new articles for watchlisted tickers, diffs against Room,
+  classifies only the *new* ones with Claude Haiku, and fires a local
+  notification for anything flagged urgent (interval also Settings-
+  controlled); `DigestWorker` runs once daily at a fixed time, summarizing
+  the whole watchlist's notable news with Claude Sonnet.
 - **Opening the app always does a foreground fetch** regardless of the
   background-polling setting, so the dashboard is never stale just
   because the user turned background polling off.
@@ -203,7 +221,7 @@ here as each phase actually lands:
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
   - [x] SEC filings feed (EDGAR 8-K/Form 4 via the existing news registry) (unverified — see Status above)
   - [x] Earnings-calendar-aware alert sensitivity (unverified — see Status above; also added the missing baseline urgency gate)
-  - [ ] Pre-market digest notification (Claude Sonnet)
+  - [x] Pre-market digest notification (Claude Sonnet) (unverified — see Status above; fixed 8am, hot/warm-only, off by default)
   - [ ] Home-screen widget
 
 ## Commands

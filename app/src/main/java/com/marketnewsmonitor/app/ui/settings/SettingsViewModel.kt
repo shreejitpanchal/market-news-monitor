@@ -11,6 +11,7 @@ import com.marketnewsmonitor.app.MarketNewsMonitorApp
 import com.marketnewsmonitor.app.data.backup.BackupRepository
 import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
+import com.marketnewsmonitor.app.work.DigestScheduler
 import com.marketnewsmonitor.app.work.PollScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,9 @@ class SettingsViewModel(
     private val _userEmail = MutableStateFlow(appPreferences.userEmail)
     val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
+    private val _digestEnabled = MutableStateFlow(appPreferences.digestEnabled)
+    val digestEnabled: StateFlow<Boolean> = _digestEnabled.asStateFlow()
+
     private val _status = MutableStateFlow<BackupStatus>(BackupStatus.Idle)
     val status: StateFlow<BackupStatus> = _status.asStateFlow()
 
@@ -85,6 +89,20 @@ class SettingsViewModel(
         _pollIntervalMinutes.value = minutes
         if (appPreferences.pollingEnabled) {
             PollScheduler.schedule(appContext, minutes)
+        }
+    }
+
+    /**
+     * Same shape as [setPollingEnabled]: the caller requests the
+     * POST_NOTIFICATIONS permission first on API 33+, this is called either way.
+     */
+    fun setDigestEnabled(enabled: Boolean) {
+        appPreferences.digestEnabled = enabled
+        _digestEnabled.value = enabled
+        if (enabled) {
+            DigestScheduler.schedule(appContext)
+        } else {
+            DigestScheduler.cancel(appContext)
         }
     }
 

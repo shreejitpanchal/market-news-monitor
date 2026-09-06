@@ -86,6 +86,16 @@ class NewsRepository(
             rows.groupBy { it.tickerSymbol }
                 .mapValues { (_, group) -> group.map { it.urgency }.minBy { Urgency.SEVERITY_ORDER.indexOf(it) } }
         }
+
+    /**
+     * For the daily digest: [symbol]'s articles inside [freshnessWindowMillis]
+     * classified as one of [allowedUrgencies] — unlike
+     * [getUnnotifiedRecentArticles], not filtered by notified state, since the
+     * digest re-summarizes anything notable even if already individually
+     * notified.
+     */
+    suspend fun getRecentNotableArticles(symbol: String, freshnessWindowMillis: Long, allowedUrgencies: Set<String>): List<Article> =
+        articleDao.getRecentByUrgencies(symbol, System.currentTimeMillis() - freshnessWindowMillis, allowedUrgencies.toList())
 }
 
 data class RefreshResult(val fetchedCount: Int, val failures: List<String>)

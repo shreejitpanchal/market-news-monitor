@@ -62,6 +62,9 @@ private class FakeArticleDao : ArticleDao {
     override suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String? = null
 
     override fun observeUrgenciesSince(sinceMillis: Long): Flow<List<TickerUrgency>> = MutableStateFlow(emptyList())
+
+    override suspend fun getRecentByUrgencies(symbol: String, sinceMillis: Long, urgencies: List<String>): List<Article> =
+        byId.values.filter { it.tickerSymbol == symbol && it.urgency in urgencies && it.publishedAt >= sinceMillis }
 }
 
 private class NoopArticleClassifier : ArticleClassifier {
