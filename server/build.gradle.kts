@@ -21,6 +21,9 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 }
 
-kotlin {
-    jvmToolchain(17)
-}
+// No `kotlin { jvmToolchain(17) }` here on purpose: that triggers Gradle's
+// separate toolchain-provisioning lookup, which failed on this machine with
+// no local JDK 17 registered and no download repository configured. This
+// module instead just compiles with whatever JDK is already running
+// Gradle -- which AGP 8.6 already requires to be 17+ for the rest of this
+// build, so it's already satisfied.
