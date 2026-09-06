@@ -6,9 +6,14 @@ trading decision — not another headline aggregator.
 
 ## Status
 
-**Planning stage.** No app code yet — see [CLAUDE.md](CLAUDE.md) and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the locked-in plan.
-Phase 0 (project scaffold) hasn't started.
+**Phase 0 (scaffold), Phase 1 (watchlist CRUD), and Phase 2 (live news
+feed) are written**, plus a Settings export/import feature — see
+[CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for the full plan. **Not yet verified**: `gradle/wrapper/gradle-wrapper.jar`
+still needs to be generated (open the project in Android Studio, or run
+`gradle wrapper` locally) before `./scripts/dev.sh all` can actually build
+it — see "Getting started" below. Phases 3–6 (background alerts, Claude
+integration, trading depth) haven't started.
 
 ## Who it's for
 
@@ -24,6 +29,10 @@ through news noise, not as a product for distribution.
   line per story.
 - **AI settings** — Claude API key entry (not subscription auth — see
   CLAUDE.md for why), model choice, and a custom "trading lens" prompt.
+- **Export / import setup** — back up the watchlist and Claude/Finnhub API
+  keys to a JSON file you choose (and restore from one), so reinstalling
+  doesn't mean starting over. The exported file contains both keys in plain
+  text by design — treat it like a password.
 - **Background alerts** — a periodic on-device check that fires a local
   notification when something on your watchlist actually matters, even
   with the app closed. No backend server.
@@ -33,8 +42,15 @@ behind them live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Getting started
 
-Not yet runnable — Phase 0 will add the Android Studio / Gradle project
-scaffold and this section will get real build/run commands at that point.
+1. Open the project root in Android Studio (recommended — it regenerates
+   `gradle/wrapper/gradle-wrapper.jar`, which isn't checked in) **or** run
+   `gradle wrapper` locally if you already have Gradle installed.
+2. `./scripts/dev.sh all` (bash) or `.\scripts\dev.ps1 all` (PowerShell) —
+   runs lint, unit tests, and a debug build. See `scripts/dev.sh -h` for
+   individual tasks (`build`, `vet`, `test`, `cov`).
+3. Run the `app` configuration from Android Studio, or `./scripts/dev.sh
+   build` and install the resulting `dist/market-news-monitor-v<version>-
+   build<N>.apk` with `adb install`.
 
 ## Disclaimer
 

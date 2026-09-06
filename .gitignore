@@ -4,7 +4,7 @@
 /local.properties
 /.idea/
 .DS_Store
-/build/
+**/build/
 /captures/
 .externalNativeBuild/
 .cxx/
@@ -25,3 +25,8 @@ secrets.properties
 # Log/cache
 *.log
 /app/release/
+
+# Dev-script output
+/dist/
+/scripts/logs/
+/BUILD_NUMBER

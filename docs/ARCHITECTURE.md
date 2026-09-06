@@ -71,9 +71,16 @@ relevance.
 |---|---|---|---|
 | Finnhub | Company news, basic financials | 60 calls/min | Yes — primary source |
 | SEC EDGAR | 8-K, Form 4 filings | Unlimited | Yes — high-signal, low-noise |
-| RSS (Yahoo Finance, Reuters, MarketWatch) | Wire headlines per ticker | Unlimited | Yes — real-time, no key |
+| RSS (Google News, per-ticker search query) | Wire headlines per ticker | Unlimited | Yes — real-time, no key |
 | Alpha Vantage | Built-in news sentiment score | 25 req/day | No — too limited to poll; reserve for on-demand deep dives |
 | NewsAPI.org | Broad headline aggregation | 100 req/day | **No — 24h delay on free tier makes it useless for alerts.** Optional historical-context use only. |
+
+The RSS row originally named Yahoo Finance/Reuters/MarketWatch specifically —
+changed during Phase 2 implementation once it turned out none of the three
+still reliably serves a public, per-ticker RSS feed (Reuters shut its public
+RSS down entirely). Google News' per-query RSS
+(`https://news.google.com/rss/search?q=<TICKER>+stock`) covers the same
+"unlimited, no key" niche and actually returns results.
 
 ## 3. Claude integration
 

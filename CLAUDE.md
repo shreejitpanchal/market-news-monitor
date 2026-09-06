@@ -11,13 +11,14 @@ distribution: sideloaded on one phone, no Play Store release, no accounts,
 no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
-**Current status: planning stage.** No Gradle/Android Studio project
-exists yet. This file describes the *decided* architecture so the Phase 0
-scaffold (see Roadmap below) is built consistently with it — treat
-sections below as binding intent, not yet-observed fact, until the
-corresponding phase lands. Update this file's "Status" markers as phases
-complete; don't let it drift into describing code that doesn't exist
-without saying so.
+**Current status: Phase 0 (scaffold), Phase 1 (watchlist CRUD), and Phase 2
+(live news feed) are written**, plus a Settings export/import feature
+added ahead of its normal Phase 5 slot (see Roadmap below) because
+export/import needed somewhere to store the Claude and Finnhub API keys.
+**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked in
+(see Commands below), so no `./gradlew` command has actually been run
+against this code yet. Don't treat the roadmap checkboxes as "tested and
+working" until that first build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -49,6 +50,22 @@ without saying so.
   dashboard on open would be a worse experience than the extra API calls
   cost, and this path doesn't touch `WorkManager` at all, so it works
   even with background polling disabled.
+- **Settings export/import includes the Claude and Finnhub API keys in
+  plain text.** User's explicit choice, made when this feature was built
+  (Phase 1) — convenience over encrypting the export. The Settings screen
+  shows a warning above the Export button rather than hiding the risk.
+  Don't add export-file encryption unasked; don't silently drop a key from
+  exports either — both would contradict a decision already made.
+- **RSS source is Google News per-ticker search, not Yahoo
+  Finance/Reuters/MarketWatch as originally documented.** Changed during
+  Phase 2 — those three no longer reliably serve public per-ticker RSS
+  (Reuters has none at all). See `docs/ARCHITECTURE.md`'s data-source
+  table for the replacement URL and rationale. Don't revert to the
+  original three without first confirming they actually work again.
+- **Finnhub needs its own API key**, separate from Claude's — added to
+  Settings/export-import in Phase 2 alongside the news-fetching code that
+  needs it, ahead of its implied Phase 5 slot, same reasoning as the
+  Claude key/export-import pairing above.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -69,11 +86,12 @@ making a structural change. Summary:
   directly.
 - **News sources are a small engine/registry pattern**, not one
   monolithic fetcher — one class per source (`FinnhubSource`,
-  `RssSource`, `EdgarSource`) behind a shared interface, looked up from a
-  registry by ticker/category the way `coding-adventure`'s
-  `app/execution/registry.py` looks up one `ExecutionEngine` per
-  language. Adding a data source later (a paid feed, options flow) means
-  adding one class, not branching inside a shared fetcher.
+  `GoogleNewsRssSource`, and eventually `EdgarSource`) behind the
+  `NewsSource` interface, looked up from `NewsSourceRegistry` the way
+  `coding-adventure`'s `app/execution/registry.py` looks up one
+  `ExecutionEngine` per language. Adding a data source later (a paid
+  feed, options flow) means adding one class, not branching inside a
+  shared fetcher.
 - **WorkManager** runs a periodic worker, fetching new articles for
   watchlisted tickers, diffing against Room, classifying only the *new*
   ones with Claude Haiku, and firing a local notification for anything
@@ -118,16 +136,22 @@ making a structural change. Summary:
 See `docs/ARCHITECTURE.md` for the full phase list. Update the checkbox
 here as each phase actually lands:
 
-- [ ] Phase 0 — project scaffold
-- [ ] Phase 1 — watchlist CRUD, no live news yet
-- [ ] Phase 2 — live news feed (Finnhub + RSS)
+- [x] Phase 0 — project scaffold (unverified — see Status above)
+- [x] Phase 1 — watchlist CRUD, no live news yet (unverified — see Status above)
+- [x] Phase 2 — live news feed (Finnhub + Google News RSS) (unverified — see Status above)
 - [ ] Phase 3 — background alerts (WorkManager + notifications)
 - [ ] Phase 4 — Claude integration (classification, urgency badges)
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
 
 ## Commands
 
-Not yet applicable — no Gradle wrapper exists until Phase 0. Once it
-does, this section should list the real `./gradlew` build/test/install
-commands, matching how `coding-adventure`'s CLAUDE.md documents its own
-`.venv`-relative commands.
+`scripts/dev.sh` (bash) / `scripts/dev.ps1` (PowerShell) are the single
+source of truth for build/lint/test — see `.claude/commands/verify.md`.
+Key tasks: `build` (`./gradlew assembleDebug`, copies the APK to `dist/`),
+`vet` (`./gradlew lint`), `test` (`./gradlew test`), `cov` (Jacoco),
+`all` = build+vet+test, `full` = all+cov+graphify.
+
+**Before any of this works**, `gradle/wrapper/gradle-wrapper.jar` has to
+exist — it's a compiled binary that can't be checked in by an agent
+writing text files, so it isn't committed yet. Open the project in Android
+Studio once (regenerates it on sync) or run `gradle wrapper` locally.
