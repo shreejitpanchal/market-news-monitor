@@ -1,0 +1,13 @@
+# Copy this file to local.properties (gitignored) and fill in your real
+# values. The proxy reads this once at startup -- restart it after editing.
+# These are the same three free-tier keys the Android app's Settings screen
+# uses; see the main README for where to get each one.
+
+claude.apiKey=
+finnhub.apiKey=
+alphaVantage.apiKey=
+
+# Not secrets, but required by SEC EDGAR's fair-access policy -- sent as the
+# User-Agent on every EDGAR request. See app CLAUDE.md's EDGAR decision.
+user.name=
+user.email=

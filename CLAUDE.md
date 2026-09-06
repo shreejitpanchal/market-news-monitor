@@ -36,25 +36,51 @@ first real run comes back clean.
   full access to WorkManager, notification channels, and home-screen
   widgets matters more here than portability. This still holds for the
   real app — see the `webapp/` module below, which does not reopen it.
-- **`webapp/` is a Chrome-viewable UI preview, not a second production
-  target.** Added when the user wanted to look at screens locally without
-  installing to a phone/emulator. It's a separate Compose Multiplatform
-  (`wasmJs`) module, additive and isolated from `app/` — no shared code,
-  since `app`'s Composables are `androidx.compose.*` (Android-only) and
-  Compose Multiplatform is `org.jetbrains.compose.*`, different artifacts.
-  Deliberately **sample data only, nothing real**: `WorkManager`/
-  notifications/the Glance widget have no browser equivalent (dropped
-  per explicit instruction); `Room` and `Retrofit` don't run on `wasmJs`;
-  and calling Finnhub/Alpha Vantage/EDGAR/Claude directly from a browser
-  tab would either hit CORS or require putting API keys in browser
-  JS/localStorage, visible in devtools — a real security regression, not
-  just extra work, so it was rejected rather than attempted. Run it with
-  `scripts/run_web.ps1` (or `.sh`) — a dedicated launcher script alongside
+- **`webapp/` + `server/` are a real Chrome desktop client, not a second
+  hosted production target.** Added when the user wanted to actually use
+  the app locally in Chrome, not just glance at a mockup. `webapp/` is a
+  Compose Multiplatform (`wasmJs`) module, additive and isolated from
+  `app/` — no shared code, since `app`'s Composables are
+  `androidx.compose.*` (Android-only) and Compose Multiplatform is
+  `org.jetbrains.compose.*`, different artifacts; `WorkManager`/
+  notifications/the Glance widget have no browser equivalent, so
+  background alerts are simply dropped — manual refresh only, per
+  explicit instruction. `Room`/`Retrofit` don't run on `wasmJs` either,
+  so watchlist persistence uses browser `localStorage`
+  (`WatchlistStore.kt`) instead of Room.
+- **Live data goes through `server/`, a local-only proxy — the browser
+  never talks to Finnhub/Alpha Vantage/EDGAR/Claude directly, and never
+  holds their API keys.** Calling those APIs straight from a browser tab
+  would either hit CORS (SEC EDGAR and Anthropic both plausible blockers)
+  or mean the keys sit in browser storage, visible via devtools — a real
+  security regression from Android's Keystore, not just extra work.
+  `server/` is a plain Kotlin/JVM Ktor app, binds to `127.0.0.1` only,
+  and is a **generic credential-injecting relay with no business logic**
+  — it forwards a request to the real host and attaches the right
+  key/header; all mapping/prompt/parsing logic lives in `webapp/`
+  (ported from `app`'s already-working equivalents, e.g.
+  `FinnhubClient.kt` ports `FinnhubSource.kt`'s `mapFinnhubNews`). Reads
+  its config once at startup from `server/local.properties` (gitignored,
+  `server/local.properties.example` is the committed template) — the
+  three API keys plus name/email for the EDGAR User-Agent all live
+  there, not in the browser; the web Settings screen is **read-only**,
+  showing what's configured via `/proxy/status`, not an input form. Two
+  simplifications versus the Android app, both to avoid needing a
+  date-arithmetic library on the `wasmJs` target: no dedup clustering,
+  and date-window/cutoff filtering is either computed server-side (`/proxy/
+  finnhub/news`, using `java.time`) or dropped in favor of "take what the
+  API already returns" (Alpha Vantage's `outputsize=compact`, EDGAR's
+  already-newest-first "recent" list). **This does reintroduce "a
+  server," reopening the "no backend server" decision below** — but it's
+  local-only, never network-exposed, operated by nobody but you, and
+  exists purely so this one browser tab can reach the internet without
+  embedding secrets in it. That's a different risk profile than a hosted
+  backend, which is what that decision was actually about.
+  `scripts/run_web.ps1` (or `.sh`) starts both `server/` and `webapp/`'s
+  dev server before opening Chrome — a dedicated launcher alongside
   `dev.sh`/`dev.ps1`, same relationship `build_apk.sh` has to `dev.sh`,
-  not a `dev.sh` task, since it starts a long-running dev server rather
-  than a one-shot gate. Don't wire real data into this module without
-  first reconsidering the CORS/key-exposure problem above — it wasn't
-  skipped by accident.
+  not a `dev.sh` task, since both are long-running processes rather than
+  one-shot gates.
 - **AI integration is a Claude API key, not subscription auth.** Reusing a
   Claude.ai Pro/Max login isn't a supported integration path for
   third-party apps — Anthropic doesn't expose that as an API. Don't
@@ -62,9 +88,14 @@ first real run comes back clean.
   the spirit of the ToS. The key is entered once in Settings and never
   hardcoded, logged, or committed (see `.gitignore`'s `secrets.properties`
   entry).
-- **No backend server.** Background alerting is solved with an on-device
-  `WorkManager` periodic job + local notifications, not a push server —
-  see Architecture below for why this is sufficient.
+- **No backend server for the Android app.** Background alerting is
+  solved with an on-device `WorkManager` periodic job + local
+  notifications, not a push server — see Architecture below for why this
+  is sufficient. `server/`'s local-only proxy for the `webapp/` Chrome
+  client (above) doesn't reopen this: it's never network-exposed, has no
+  accounts, and isn't operated/hosted the way this decision is actually
+  about — it exists only so one local browser tab can reach the internet
+  without embedding secrets in it.
 - **Background polling is user-controlled, not fixed.** The poll interval
   is a Settings value (default 15 min, Android's own floor for periodic
   `WorkManager` work), and background polling can be turned off entirely
@@ -360,9 +391,11 @@ Key tasks: `build` (`./gradlew assembleDebug`, copies the APK to `dist/`),
 it doesn't reimplement the Gradle invocation, so `scripts/dev.sh`
 remains the only place that actually knows how to build this repo.
 
-`scripts/run_web.ps1` / `run_web.sh` start the `webapp/` sample-data
-Chrome preview's dev server and open it in Chrome — see the `webapp/`
-decision above for what it is and, importantly, isn't.
+`scripts/run_web.ps1` / `run_web.sh` start the `server/` proxy and the
+`webapp/` dev server, then open Chrome — see the `webapp/`/`server/`
+decisions above for what this Chrome client is and isn't. Copy
+`server/local.properties.example` to `server/local.properties` and fill
+in your keys before running it.
 
 `gradle/wrapper/gradle-wrapper.jar` is checked in and `./gradlew` works
 — it had to be generated via a real local Gradle install (an agent

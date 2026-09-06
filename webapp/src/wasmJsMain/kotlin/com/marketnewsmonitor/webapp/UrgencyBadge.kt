@@ -18,7 +18,7 @@ fun UrgencyBadge(urgency: Urgency) {
         Urgency.CALM -> Color(0xFF757575)
     }
     Text(
-        urgency.label,
+        urgency.name,
         color = Color.White,
         style = MaterialTheme.typography.labelSmall,
         modifier = Modifier

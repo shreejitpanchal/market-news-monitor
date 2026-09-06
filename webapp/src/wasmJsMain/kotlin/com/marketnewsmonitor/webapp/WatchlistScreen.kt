@@ -1,5 +1,6 @@
 package com.marketnewsmonitor.webapp
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,15 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
-/**
- * "Add ticker" here only appends to the in-memory sample list for the
- * current page load — this is a UI preview, nothing persists across a
- * refresh and nothing is fetched from a real symbol-search API.
- */
 @Composable
 fun WatchlistScreen(onTickerClick: (String) -> Unit, modifier: Modifier = Modifier) {
-    var tickers by remember { mutableStateOf(SampleData.tickers) }
+    val tickers by WatchlistStore.tickers.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -58,12 +58,13 @@ fun WatchlistScreen(onTickerClick: (String) -> Unit, modifier: Modifier = Modifi
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column {
                                 Text(ticker.symbol, style = MaterialTheme.typography.titleMedium)
-                                Text(ticker.companyName, style = MaterialTheme.typography.bodySmall)
+                                ticker.companyName?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             }
-                            UrgencyBadge(ticker.urgency)
+                            IconButton(onClick = { WatchlistStore.remove(ticker.symbol) }) { Text("✕") }
                         }
                     }
                 }
@@ -72,29 +73,64 @@ fun WatchlistScreen(onTickerClick: (String) -> Unit, modifier: Modifier = Modifi
     }
 
     if (showAddDialog) {
-        var symbol by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Add ticker (preview only)") },
-            text = {
-                OutlinedTextField(
-                    value = symbol,
-                    onValueChange = { symbol = it },
-                    label = { Text("Symbol") },
-                    singleLine = true,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (symbol.isNotBlank()) {
-                            tickers = tickers + SampleTicker(symbol.uppercase(), "Sample company", Urgency.CALM)
-                        }
-                        showAddDialog = false
-                    },
-                ) { Text("Add") }
-            },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } },
-        )
+        AddTickerDialog(onDismiss = { showAddDialog = false })
     }
+}
+
+/** Real symbol search via the proxy (FinnhubClient), debounced 300ms -- same approach as the Android app's Add Ticker dialog. */
+@Composable
+private fun AddTickerDialog(onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<TickerSuggestion>>(emptyList()) }
+
+    LaunchedEffect(query) {
+        if (query.isBlank()) {
+            suggestions = emptyList()
+            return@LaunchedEffect
+        }
+        delay(300)
+        suggestions = FinnhubClient.search(query)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add ticker") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Symbol or company name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                suggestions.forEach { suggestion ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                WatchlistStore.add(suggestion.symbol, suggestion.name)
+                                onDismiss()
+                            }
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Column {
+                            Text(suggestion.symbol, style = MaterialTheme.typography.bodyMedium)
+                            Text(suggestion.name, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (query.isNotBlank()) WatchlistStore.add(query, null)
+                    onDismiss()
+                },
+                enabled = query.isNotBlank(),
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

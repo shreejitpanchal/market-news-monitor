@@ -21,6 +21,7 @@
 secrets.properties
 *.env
 .env.*
+/server/local.properties
 
 # Log/cache
 *.log

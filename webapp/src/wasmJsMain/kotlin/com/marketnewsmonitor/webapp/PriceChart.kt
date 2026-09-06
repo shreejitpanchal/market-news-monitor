@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
  * can't depend on the Android-only `app` module.
  */
 @Composable
-fun PriceChart(points: List<SamplePricePoint>, modifier: Modifier = Modifier) {
+fun PriceChart(points: List<PricePoint>, modifier: Modifier = Modifier) {
     if (points.isEmpty()) return
 
     val minClose = points.minOf { it.close }
@@ -41,7 +41,7 @@ fun PriceChart(points: List<SamplePricePoint>, modifier: Modifier = Modifier) {
             drawPath(path, color = Color(0xFF1E88E5), style = Stroke(width = 4f))
         }
         Text(
-            "${formatPrice(minClose)} – ${formatPrice(maxClose)} (sample data)",
+            "${formatPrice(minClose)} – ${formatPrice(maxClose)} · ${points.first().date} – ${points.last().date}",
             style = MaterialTheme.typography.bodySmall,
         )
     }

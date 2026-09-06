@@ -22,8 +22,8 @@ private enum class Tab(val label: String) { DASHBOARD("Dashboard"), WATCHLIST("W
  * (`app/src/main/java/.../ui/navigation/NavGraph.kt`), reimplemented locally
  * — no shared navigation code between the two modules. Picking a ticker
  * (from Dashboard or Watchlist) swaps to a simple in-memory "detail" state
- * instead of a real nav graph, since this is a 4-screen preview, not a
- * full app.
+ * instead of a real nav graph — there's no deep linking or back-stack to
+ * preserve in a 3-tab client like this one.
  */
 @Composable
 fun App() {
