@@ -45,6 +45,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val claudeApiKey by viewModel.claudeApiKey.collectAsState()
     val finnhubApiKey by viewModel.finnhubApiKey.collectAsState()
+    val alphaVantageApiKey by viewModel.alphaVantageApiKey.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState()
     val pollingEnabled by viewModel.pollingEnabled.collectAsState()
@@ -106,6 +107,14 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             storedValue = finnhubApiKey,
             onSave = viewModel::saveFinnhubApiKey,
             helperText = "Free tier at finnhub.io — needed for company news on the ticker detail screen.",
+        )
+
+        ApiKeyField(
+            title = "Alpha Vantage API key",
+            storedValue = alphaVantageApiKey,
+            onSave = viewModel::saveAlphaVantageApiKey,
+            helperText = "Free tier at alphavantage.co (25 requests/day) — needed for the price " +
+                "chart on the ticker detail screen.",
         )
 
         Text(

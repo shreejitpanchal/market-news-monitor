@@ -39,6 +39,9 @@ class SettingsViewModel(
     private val _finnhubApiKey = MutableStateFlow(secureSettingsStore.getFinnhubApiKey().orEmpty())
     val finnhubApiKey: StateFlow<String> = _finnhubApiKey.asStateFlow()
 
+    private val _alphaVantageApiKey = MutableStateFlow(secureSettingsStore.getAlphaVantageApiKey().orEmpty())
+    val alphaVantageApiKey: StateFlow<String> = _alphaVantageApiKey.asStateFlow()
+
     private val _pollingEnabled = MutableStateFlow(appPreferences.pollingEnabled)
     val pollingEnabled: StateFlow<Boolean> = _pollingEnabled.asStateFlow()
 
@@ -65,6 +68,11 @@ class SettingsViewModel(
     fun saveFinnhubApiKey(value: String) {
         secureSettingsStore.setFinnhubApiKey(value.trim().takeIf { it.isNotEmpty() })
         _finnhubApiKey.value = value
+    }
+
+    fun saveAlphaVantageApiKey(value: String) {
+        secureSettingsStore.setAlphaVantageApiKey(value.trim().takeIf { it.isNotEmpty() })
+        _alphaVantageApiKey.value = value
     }
 
     /**
@@ -132,6 +140,7 @@ class SettingsViewModel(
                 backupRepository.importFrom(uri)
                 _claudeApiKey.value = secureSettingsStore.getClaudeApiKey().orEmpty()
                 _finnhubApiKey.value = secureSettingsStore.getFinnhubApiKey().orEmpty()
+                _alphaVantageApiKey.value = secureSettingsStore.getAlphaVantageApiKey().orEmpty()
                 _userName.value = appPreferences.userName
                 _userEmail.value = appPreferences.userEmail
                 BackupStatus.Success("Setup imported. Watchlist and API keys restored.")

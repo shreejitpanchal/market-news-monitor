@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.marketnewsmonitor.app.MarketNewsMonitorApp
 import com.marketnewsmonitor.app.data.local.entity.Article
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.remote.alphavantage.PriceHistoryProvider
+import com.marketnewsmonitor.app.data.remote.alphavantage.PricePoint
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ class TickerDetailViewModel(
     private val symbol: String,
     private val newsRepository: NewsRepository,
     tickerRepository: TickerRepository,
+    private val priceHistoryProvider: PriceHistoryProvider,
 ) : ViewModel() {
 
     val ticker: StateFlow<Ticker?> = tickerRepository.observeTickers()
@@ -40,6 +43,18 @@ class TickerDetailViewModel(
 
     private val _refreshState = MutableStateFlow<RefreshUiState>(RefreshUiState.Idle)
     val refreshState: StateFlow<RefreshUiState> = _refreshState.asStateFlow()
+
+    // Loaded once per screen visit, not on every manual news-refresh tap —
+    // daily-granularity price data doesn't change intra-day, and Alpha
+    // Vantage's free tier caps at 25 requests/day.
+    private val _priceHistory = MutableStateFlow<List<PricePoint>>(emptyList())
+    val priceHistory: StateFlow<List<PricePoint>> = _priceHistory.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _priceHistory.value = priceHistoryProvider.getDailyCloses(symbol)
+        }
+    }
 
     fun refresh() {
         val currentTicker = ticker.value ?: Ticker(symbol, companyName = null, addedAt = 0L)
@@ -65,7 +80,12 @@ class TickerDetailViewModel(
         fun factory(symbol: String) = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MarketNewsMonitorApp
-                TickerDetailViewModel(symbol, app.container.newsRepository, app.container.tickerRepository)
+                TickerDetailViewModel(
+                    symbol,
+                    app.container.newsRepository,
+                    app.container.tickerRepository,
+                    app.container.priceHistoryProvider,
+                )
             }
         }
     }

@@ -40,6 +40,7 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
     val viewModel: TickerDetailViewModel = viewModel(factory = TickerDetailViewModel.factory(symbol))
     val ticker by viewModel.ticker.collectAsState()
     val articles by viewModel.articles.collectAsState()
+    val priceHistory by viewModel.priceHistory.collectAsState()
     val refreshState by viewModel.refreshState.collectAsState()
     val context = LocalContext.current
 
@@ -67,6 +68,10 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
             IconButton(onClick = viewModel::refresh) {
                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
             }
+        }
+
+        if (priceHistory.isNotEmpty()) {
+            PriceChart(priceHistory)
         }
 
         when (val state = refreshState) {

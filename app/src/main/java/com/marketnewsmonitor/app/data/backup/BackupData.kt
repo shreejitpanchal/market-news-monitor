@@ -21,9 +21,12 @@ data class BackupData(
     // User-Agent identity. Defaulted so older exports still decode.
     val userName: String = "",
     val userEmail: String = "",
+    // Added in version 4 — powers the ticker-detail price chart. Defaulted
+    // so older exports still decode.
+    val alphaVantageApiKey: String? = null,
 ) {
     companion object {
-        const val CURRENT_VERSION = 3
+        const val CURRENT_VERSION = 4
     }
 }
 

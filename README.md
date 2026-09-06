@@ -14,14 +14,16 @@ through news noise, not as a product for distribution.
 - **Dashboard** — every tracked ticker as a card with an urgency badge
   (hot/warm/calm), so triage happens before you open anything.
 - **Watchlist → Ticker detail** — add/remove tickers, with symbol/company
-  name suggestions as you type; tap one for a de-duplicated news feed,
-  pulled from Finnhub, Google News, and SEC EDGAR filings, with sources
-  cited and an AI "why it matters" line per story.
+  name suggestions as you type; tap one for a 3-month daily price chart
+  and a de-duplicated news feed, pulled from Finnhub, Google News, and
+  SEC EDGAR filings, with sources cited and an AI "why it matters" line
+  per story.
 - **AI classification** — Claude Haiku scores each new article's
   urgency and writes a one-line "why it matters," so the badges and
   feed reflect what's actually worth attention, not just what's new.
-- **AI settings** — Claude and Finnhub API key entry (not subscription
-  auth for Claude — see CLAUDE.md for why).
+- **API key settings** — Claude, Finnhub, and Alpha Vantage key entry,
+  all free-tier (not subscription auth for Claude — see CLAUDE.md for
+  why).
 - **Background alerts** — a periodic on-device check that fires a local
   notification when something on your watchlist actually matters, even
   with the app closed. No backend server. Notifications sharpen near a

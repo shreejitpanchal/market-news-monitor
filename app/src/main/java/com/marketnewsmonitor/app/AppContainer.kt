@@ -2,6 +2,8 @@ package com.marketnewsmonitor.app
 
 import android.content.Context
 import com.marketnewsmonitor.app.data.backup.BackupRepository
+import com.marketnewsmonitor.app.data.remote.alphavantage.AlphaVantageApi
+import com.marketnewsmonitor.app.data.remote.alphavantage.AlphaVantagePriceHistoryProvider
 import com.marketnewsmonitor.app.data.local.AppDatabase
 import com.marketnewsmonitor.app.data.notifications.NotificationHelper
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
@@ -67,6 +69,13 @@ class AppContainer(context: Context) {
         .build()
         .create(EdgarApi::class.java)
 
+    private val alphaVantageApi: AlphaVantageApi = Retrofit.Builder()
+        .baseUrl(AlphaVantageApi.BASE_URL)
+        .client(okHttpClient)
+        .addConverterFactory(jsonConverterFactory)
+        .build()
+        .create(AlphaVantageApi::class.java)
+
     private val newsSourceRegistry = NewsSourceRegistry(
         listOf(
             FinnhubSource(finnhubApi) { secureSettingsStore.getFinnhubApiKey() },
@@ -90,4 +99,6 @@ class AppContainer(context: Context) {
         FinnhubEarningsCalendarProvider(finnhubApi) { secureSettingsStore.getFinnhubApiKey() }
 
     val digestGenerator: DigestGenerator = ClaudeDigestGenerator(claudeApi) { secureSettingsStore.getClaudeApiKey() }
+
+    val priceHistoryProvider = AlphaVantagePriceHistoryProvider(alphaVantageApi) { secureSettingsStore.getAlphaVantageApiKey() }
 }

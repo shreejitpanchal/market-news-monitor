@@ -80,6 +80,27 @@ first real run comes back clean.
   the same company (symbol contains "."), since the watchlist only
   tracks the primary US-listed ticker, and caps at
   `TickerSymbolSearch.MAX_SUGGESTIONS` (8).
+- **Ticker detail's price chart uses Alpha Vantage, not Finnhub** —
+  Finnhub's free tier no longer reliably serves historical candle data
+  for US stocks (gated behind a paid plan), while Alpha Vantage's free
+  tier (25 req/day) was already reserved in `docs/ARCHITECTURE.md`'s
+  data-source table for exactly this kind of on-demand call. It's a
+  third, separate API key (`SecureSettingsStore.getAlphaVantageApiKey`),
+  carried through export/import like the others (`BackupData` version
+  4). `AlphaVantagePriceHistoryProvider.getDailyCloses` is loaded once
+  per `TickerDetailViewModel` instance (screen open), not on every tap
+  of the news-refresh button — daily-granularity price data doesn't
+  change intra-day, and the daily cap is tight. Fixed 3-month lookback,
+  `outputsize=compact`, no range picker — deliberately minimal scope,
+  matching this app's other short time horizons (7-day news lookback,
+  24h notification freshness). `PriceChart` is a simple line chart of
+  daily closes, hand-drawn with Compose `Canvas` — no charting library
+  dependency, no axes/gridlines, just the line plus a min/max/date-range
+  caption. Same silent-empty-result convention as every other optional
+  API integration: no key, a rate-limited/invalid-key response (Alpha
+  Vantage omits `"Time Series (Daily)"` and returns a `"Note"`/
+  `"Information"` string instead), or a network error all mean no chart
+  renders — never an error banner.
 - **Background-poll notifications are grouped one-per-ticker, not
   one-per-article**, and tapping one opens the app to Dashboard rather
   than deep-linking to the specific ticker. Both were explicit scope

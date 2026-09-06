@@ -72,7 +72,7 @@ relevance.
 | Finnhub | Company news, basic financials | 60 calls/min | Yes — primary source |
 | SEC EDGAR | 8-K, Form 4 filings | Unlimited | Yes — high-signal, low-noise |
 | RSS (Google News, per-ticker search query) | Wire headlines per ticker | Unlimited | Yes — real-time, no key |
-| Alpha Vantage | Built-in news sentiment score | 25 req/day | No — too limited to poll; reserve for on-demand deep dives |
+| Alpha Vantage | Daily close prices (`TIME_SERIES_DAILY`) | 25 req/day | No — too limited to poll; used on-demand for the ticker-detail price chart |
 | NewsAPI.org | Broad headline aggregation | 100 req/day | **No — 24h delay on free tier makes it useless for alerts.** Optional historical-context use only. |
 
 The RSS row originally named Yahoo Finance/Reuters/MarketWatch specifically —
@@ -81,6 +81,16 @@ still reliably serves a public, per-ticker RSS feed (Reuters shut its public
 RSS down entirely). Google News' per-query RSS
 (`https://news.google.com/rss/search?q=<TICKER>+stock`) covers the same
 "unlimited, no key" niche and actually returns results.
+
+The Alpha Vantage row originally listed a built-in news-sentiment score as
+its main use, on the assumption it might feed the alerting path someday —
+it never did. It found its actual on-demand use later: the ticker-detail
+price chart (§4's "Live news feed" phase), which fits exactly the "too
+limited to poll" niche this row always described, since a chart loads once
+per screen visit rather than on every background poll. Finnhub was
+considered for the same chart first and rejected — its free tier no longer
+reliably serves historical candle data for US stocks (gated behind a paid
+plan).
 
 ## 3. Claude integration
 
@@ -121,7 +131,12 @@ Each phase ships something actually usable, not just a milestone.
    instead of optional. An "Import setup instead" shortcut on that screen
    satisfies the gate from a restored backup without retyping.
 3. **Live news feed** — Finnhub + RSS ingestion into Room, ticker-detail
-   feed with clickable source links, manual refresh.
+   feed with clickable source links, manual refresh. **Later addition:**
+   a daily-close price chart (`PriceChart`, a hand-drawn Compose `Canvas`
+   line chart, no charting library) above the news feed, backed by Alpha
+   Vantage's `TIME_SERIES_DAILY` (§2) — fixed 3-month lookback, loaded
+   once per screen visit via `AlphaVantagePriceHistoryProvider`, not
+   re-fetched on every manual news refresh.
 4. **Background alerts** — WorkManager periodic poll + diffing against
    already-seen articles, local notifications with per-ticker mute.
 5. **Claude comes online** — API key settings screen, per-article urgency

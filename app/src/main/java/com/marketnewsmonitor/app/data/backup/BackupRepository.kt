@@ -29,6 +29,7 @@ class BackupRepository(
             finnhubApiKey = secureSettingsStore.getFinnhubApiKey(),
             userName = appPreferences.userName,
             userEmail = appPreferences.userEmail,
+            alphaVantageApiKey = secureSettingsStore.getAlphaVantageApiKey(),
         )
         val resolver = context.contentResolver
         resolver.openOutputStream(uri)?.use { out ->
@@ -49,5 +50,6 @@ class BackupRepository(
         secureSettingsStore.setFinnhubApiKey(backup.finnhubApiKey)
         appPreferences.userName = backup.userName
         appPreferences.userEmail = backup.userEmail
+        secureSettingsStore.setAlphaVantageApiKey(backup.alphaVantageApiKey)
     }
 }

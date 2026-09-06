@@ -36,8 +36,15 @@ class SecureSettingsStore(context: Context) {
         prefs.edit().putString(KEY_FINNHUB_API_KEY, value).apply()
     }
 
+    fun getAlphaVantageApiKey(): String? = prefs.getString(KEY_ALPHA_VANTAGE_API_KEY, null)
+
+    fun setAlphaVantageApiKey(value: String?) {
+        prefs.edit().putString(KEY_ALPHA_VANTAGE_API_KEY, value).apply()
+    }
+
     private companion object {
         const val KEY_CLAUDE_API_KEY = "claude_api_key"
         const val KEY_FINNHUB_API_KEY = "finnhub_api_key"
+        const val KEY_ALPHA_VANTAGE_API_KEY = "alpha_vantage_api_key"
     }
 }

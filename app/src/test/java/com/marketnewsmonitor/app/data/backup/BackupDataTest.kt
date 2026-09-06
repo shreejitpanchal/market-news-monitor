@@ -21,6 +21,7 @@ class BackupDataTest {
             finnhubApiKey = "finnhub-test-key",
             userName = "Shreejit",
             userEmail = "shreejit@example.com",
+            alphaVantageApiKey = "alpha-vantage-test-key",
         )
 
         val encoded = json.encodeToString(BackupData.serializer(), original)
@@ -43,6 +44,7 @@ class BackupDataTest {
         assertNull(decoded.finnhubApiKey)
         assertEquals("", decoded.userName)
         assertEquals("", decoded.userEmail)
+        assertNull(decoded.alphaVantageApiKey)
     }
 
     @Test
