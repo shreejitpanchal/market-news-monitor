@@ -21,7 +21,7 @@ class BackupRepository(
         val backup = BackupData(
             exportedAt = System.currentTimeMillis(),
             tickers = tickerRepository.getTickers().map {
-                BackupTicker(it.symbol, it.companyName, it.addedAt)
+                BackupTicker(it.symbol, it.companyName, it.addedAt, it.muted)
             },
             apiKey = secureSettingsStore.getClaudeApiKey(),
             finnhubApiKey = secureSettingsStore.getFinnhubApiKey(),
@@ -39,7 +39,7 @@ class BackupRepository(
         val backup = json.decodeFromString(BackupData.serializer(), text)
 
         tickerRepository.replaceAll(
-            backup.tickers.map { Ticker(it.symbol, it.companyName, it.addedAt) },
+            backup.tickers.map { Ticker(it.symbol, it.companyName, it.addedAt, it.muted) },
         )
         secureSettingsStore.setClaudeApiKey(backup.apiKey)
         secureSettingsStore.setFinnhubApiKey(backup.finnhubApiKey)

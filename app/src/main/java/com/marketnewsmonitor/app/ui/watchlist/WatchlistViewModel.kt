@@ -44,6 +44,10 @@ class WatchlistViewModel(private val tickerRepository: TickerRepository) : ViewM
         viewModelScope.launch { tickerRepository.removeTicker(ticker) }
     }
 
+    fun toggleMuted(ticker: Ticker) {
+        viewModelScope.launch { tickerRepository.setMuted(ticker, !ticker.muted) }
+    }
+
     companion object {
         val Factory = viewModelFactory {
             initializer {

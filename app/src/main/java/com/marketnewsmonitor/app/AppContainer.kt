@@ -3,10 +3,12 @@ package com.marketnewsmonitor.app
 import android.content.Context
 import com.marketnewsmonitor.app.data.backup.BackupRepository
 import com.marketnewsmonitor.app.data.local.AppDatabase
+import com.marketnewsmonitor.app.data.notifications.NotificationHelper
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubApi
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
+import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
@@ -27,6 +29,8 @@ class AppContainer(context: Context) {
     val tickerRepository = TickerRepository(database.tickerDao())
     val secureSettingsStore = SecureSettingsStore(context)
     val backupRepository = BackupRepository(context, tickerRepository, secureSettingsStore)
+    val appPreferences = AppPreferences(context)
+    val notificationHelper = NotificationHelper(context)
 
     private val okHttpClient = OkHttpClient()
 

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".MarketNewsMonitorApp"
@@ -20,6 +22,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          MarketNewsMonitorApp implements Configuration.Provider to hand
+          NewsPollWorker its dependencies (manual DI, no Hilt). That only
+          takes effect if WorkManager's own default auto-initializer is
+          removed here — otherwise it initializes WorkManager with the
+          default config before Application.onCreate() runs, and our custom
+          WorkerFactory is silently never used.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>

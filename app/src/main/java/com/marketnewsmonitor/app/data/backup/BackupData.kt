@@ -28,4 +28,6 @@ data class BackupTicker(
     val symbol: String,
     val companyName: String?,
     val addedAt: Long,
+    // Added alongside Ticker.muted (Phase 3) — defaulted so older exports decode.
+    val muted: Boolean = false,
 )

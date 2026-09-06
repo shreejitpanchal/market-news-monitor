@@ -26,6 +26,10 @@ private class FakeTickerDao : TickerDao {
     override suspend fun deleteAll() {
         state.value = emptyList()
     }
+
+    override suspend fun setMuted(symbol: String, muted: Boolean) {
+        state.value = state.value.map { if (it.symbol == symbol) it.copy(muted = muted) else it }
+    }
 }
 
 class TickerRepositoryTest {
@@ -71,5 +75,18 @@ class TickerRepositoryTest {
         repository.removeTicker(repository.getTickers().first { it.symbol == "AAPL" })
 
         assertEquals(listOf("TSLA"), repository.getTickers().map { it.symbol })
+    }
+
+    @Test
+    fun `setMuted toggles only the matching ticker`() = runBlocking {
+        val repository = TickerRepository(FakeTickerDao())
+        repository.addTicker("AAPL", null)
+        repository.addTicker("TSLA", null)
+
+        repository.setMuted(repository.getTickers().first { it.symbol == "AAPL" }, muted = true)
+
+        val tickers = repository.getTickers().associateBy { it.symbol }
+        assertEquals(true, tickers.getValue("AAPL").muted)
+        assertEquals(false, tickers.getValue("TSLA").muted)
     }
 }

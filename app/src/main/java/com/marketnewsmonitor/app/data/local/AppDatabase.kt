@@ -13,7 +13,7 @@ import com.marketnewsmonitor.app.data.local.entity.Ticker
 
 @Database(
     entities = [Ticker::class, Article::class, Source::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

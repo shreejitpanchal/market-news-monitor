@@ -1,19 +1,24 @@
 package com.marketnewsmonitor.app.ui.settings
 
+import android.Manifest
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,10 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.marketnewsmonitor.app.data.settings.AppPreferences
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,8 +42,18 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val claudeApiKey by viewModel.claudeApiKey.collectAsState()
     val finnhubApiKey by viewModel.finnhubApiKey.collectAsState()
+    val pollingEnabled by viewModel.pollingEnabled.collectAsState()
+    val pollIntervalMinutes by viewModel.pollIntervalMinutes.collectAsState()
     val status by viewModel.status.collectAsState()
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var notificationDenied by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationDenied = !granted
+        viewModel.setPollingEnabled(true)
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -62,6 +79,39 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             onSave = viewModel::saveFinnhubApiKey,
             helperText = "Free tier at finnhub.io — needed for company news on the ticker detail screen.",
         )
+
+        HorizontalDivider()
+
+        Text("Background polling", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Switch(
+                checked = pollingEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.setPollingEnabled(enabled)
+                    }
+                },
+            )
+            Text(if (pollingEnabled) "On" else "Off")
+        }
+        if (notificationDenied) {
+            Text(
+                "Notification permission denied — polling still runs, but you won't see alerts until it's granted.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppPreferences.ALLOWED_POLL_INTERVALS_MINUTES.forEach { minutes ->
+                FilterChip(
+                    selected = pollIntervalMinutes == minutes,
+                    onClick = { viewModel.setPollIntervalMinutes(minutes) },
+                    label = { Text("${minutes}m") },
+                )
+            }
+        }
 
         HorizontalDivider()
 

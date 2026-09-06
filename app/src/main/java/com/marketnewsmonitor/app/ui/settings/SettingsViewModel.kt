@@ -1,5 +1,6 @@
 package com.marketnewsmonitor.app.ui.settings
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -8,7 +9,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.marketnewsmonitor.app.MarketNewsMonitorApp
 import com.marketnewsmonitor.app.data.backup.BackupRepository
+import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
+import com.marketnewsmonitor.app.work.PollScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,8 +26,10 @@ sealed interface BackupStatus {
 }
 
 class SettingsViewModel(
+    private val appContext: Context,
     private val secureSettingsStore: SecureSettingsStore,
     private val backupRepository: BackupRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     private val _claudeApiKey = MutableStateFlow(secureSettingsStore.getClaudeApiKey().orEmpty())
@@ -32,6 +37,12 @@ class SettingsViewModel(
 
     private val _finnhubApiKey = MutableStateFlow(secureSettingsStore.getFinnhubApiKey().orEmpty())
     val finnhubApiKey: StateFlow<String> = _finnhubApiKey.asStateFlow()
+
+    private val _pollingEnabled = MutableStateFlow(appPreferences.pollingEnabled)
+    val pollingEnabled: StateFlow<Boolean> = _pollingEnabled.asStateFlow()
+
+    private val _pollIntervalMinutes = MutableStateFlow(appPreferences.pollIntervalMinutes)
+    val pollIntervalMinutes: StateFlow<Long> = _pollIntervalMinutes.asStateFlow()
 
     private val _status = MutableStateFlow<BackupStatus>(BackupStatus.Idle)
     val status: StateFlow<BackupStatus> = _status.asStateFlow()
@@ -44,6 +55,31 @@ class SettingsViewModel(
     fun saveFinnhubApiKey(value: String) {
         secureSettingsStore.setFinnhubApiKey(value.trim().takeIf { it.isNotEmpty() })
         _finnhubApiKey.value = value
+    }
+
+    /**
+     * Enables/disables the background poll. The caller (Settings screen) is
+     * responsible for requesting the POST_NOTIFICATIONS permission first on
+     * API 33+ — this is called either way, since polling can run without it
+     * (articles still get fetched; they just won't surface as notifications
+     * until the permission is granted).
+     */
+    fun setPollingEnabled(enabled: Boolean) {
+        appPreferences.pollingEnabled = enabled
+        _pollingEnabled.value = enabled
+        if (enabled) {
+            PollScheduler.schedule(appContext, appPreferences.pollIntervalMinutes)
+        } else {
+            PollScheduler.cancel(appContext)
+        }
+    }
+
+    fun setPollIntervalMinutes(minutes: Long) {
+        appPreferences.pollIntervalMinutes = minutes
+        _pollIntervalMinutes.value = minutes
+        if (appPreferences.pollingEnabled) {
+            PollScheduler.schedule(appContext, minutes)
+        }
     }
 
     fun exportSetup(uri: Uri) {
@@ -80,7 +116,12 @@ class SettingsViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MarketNewsMonitorApp
-                SettingsViewModel(app.container.secureSettingsStore, app.container.backupRepository)
+                SettingsViewModel(
+                    app,
+                    app.container.secureSettingsStore,
+                    app.container.backupRepository,
+                    app.container.appPreferences,
+                )
             }
         }
     }

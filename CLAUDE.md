@@ -11,14 +11,14 @@ distribution: sideloaded on one phone, no Play Store release, no accounts,
 no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
-**Current status: Phase 0 (scaffold), Phase 1 (watchlist CRUD), and Phase 2
-(live news feed) are written**, plus a Settings export/import feature
-added ahead of its normal Phase 5 slot (see Roadmap below) because
-export/import needed somewhere to store the Claude and Finnhub API keys.
-**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked in
-(see Commands below), so no `./gradlew` command has actually been run
-against this code yet. Don't treat the roadmap checkboxes as "tested and
-working" until that first build/test run comes back clean.
+**Current status: Phase 0 (scaffold) through Phase 3 (background alerts)
+are written**, plus a Settings export/import feature added ahead of its
+normal Phase 5 slot (see Roadmap below) because export/import needed
+somewhere to store the Claude and Finnhub API keys. **Not yet verified** —
+`gradle/wrapper/gradle-wrapper.jar` isn't checked in (see Commands below),
+so no `./gradlew` command has actually been run against this code yet.
+Don't treat the roadmap checkboxes as "tested and working" until that
+first build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -66,6 +66,18 @@ working" until that first build/test run comes back clean.
   Settings/export-import in Phase 2 alongside the news-fetching code that
   needs it, ahead of its implied Phase 5 slot, same reasoning as the
   Claude key/export-import pairing above.
+- **Background-poll notifications are grouped one-per-ticker, not
+  one-per-article**, and tapping one opens the app to Dashboard rather
+  than deep-linking to the specific ticker. Both were explicit scope
+  choices in Phase 3 (avoid notification spam; avoid Activity/intent
+  deep-link edge cases in a first pass) — revisit deliberately, don't
+  "improve" silently.
+- **Notification eligibility is a 24-hour freshness window on
+  `publishedAt`, not just the `notified` flag.** Without it, a freshly
+  added ticker's first background poll would dump a week of Finnhub
+  backfill as one giant notification. Backfill articles still get
+  inserted and are visible in ticker detail — they just never notify.
+  See `NewsPollRunner.NOTIFICATION_FRESHNESS_WINDOW_MILLIS`.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -139,7 +151,7 @@ here as each phase actually lands:
 - [x] Phase 0 — project scaffold (unverified — see Status above)
 - [x] Phase 1 — watchlist CRUD, no live news yet (unverified — see Status above)
 - [x] Phase 2 — live news feed (Finnhub + Google News RSS) (unverified — see Status above)
-- [ ] Phase 3 — background alerts (WorkManager + notifications)
+- [x] Phase 3 — background alerts (WorkManager + notifications) (unverified — see Status above)
 - [ ] Phase 4 — Claude integration (classification, urgency badges)
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
 

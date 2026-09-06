@@ -24,4 +24,7 @@ interface TickerDao {
 
     @Query("DELETE FROM tickers")
     suspend fun deleteAll()
+
+    @Query("UPDATE tickers SET muted = :muted WHERE symbol = :symbol")
+    suspend fun setMuted(symbol: String, muted: Boolean)
 }

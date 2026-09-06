@@ -14,16 +14,30 @@ class BackupDataTest {
         val original = BackupData(
             exportedAt = 1_700_000_000_000L,
             tickers = listOf(
-                BackupTicker(symbol = "AAPL", companyName = "Apple Inc.", addedAt = 1L),
+                BackupTicker(symbol = "AAPL", companyName = "Apple Inc.", addedAt = 1L, muted = true),
                 BackupTicker(symbol = "TSLA", companyName = null, addedAt = 2L),
             ),
             apiKey = "sk-ant-test-key",
+            finnhubApiKey = "finnhub-test-key",
         )
 
         val encoded = json.encodeToString(BackupData.serializer(), original)
         val decoded = json.decodeFromString(BackupData.serializer(), encoded)
 
         assertEquals(original, decoded)
+        assertEquals(true, decoded.tickers.first { it.symbol == "AAPL" }.muted)
+    }
+
+    @Test
+    fun `decoding a version-1 export without muted or finnhubApiKey uses safe defaults`() {
+        val versionOneJson = """
+            {"version":1,"exportedAt":1,"tickers":[{"symbol":"AAPL","companyName":null,"addedAt":1}],"apiKey":null}
+        """.trimIndent()
+
+        val decoded = json.decodeFromString(BackupData.serializer(), versionOneJson)
+
+        assertEquals(false, decoded.tickers.first().muted)
+        assertNull(decoded.finnhubApiKey)
     }
 
     @Test

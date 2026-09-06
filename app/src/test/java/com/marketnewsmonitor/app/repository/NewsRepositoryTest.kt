@@ -13,14 +13,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private class FakeArticleDao : ArticleDao {
-    val inserted = mutableListOf<Article>()
-    private val bySymbol = MutableStateFlow<Map<String, List<Article>>>(emptyMap())
+    // Keyed by id so re-inserts (OnConflictStrategy.IGNORE in the real DAO)
+    // don't clobber an already-notified row's state.
+    private val byId = LinkedHashMap<String, Article>()
+    val inserted: List<Article> get() = byId.values.toList()
 
     override fun observeForTicker(symbol: String): Flow<List<Article>> =
-        MutableStateFlow(bySymbol.value[symbol].orEmpty())
+        MutableStateFlow(byId.values.filter { it.tickerSymbol == symbol })
 
     override suspend fun insertAll(articles: List<Article>) {
-        inserted += articles
+        for (article in articles) {
+            byId.putIfAbsent(article.id, article)
+        }
+    }
+
+    override suspend fun getUnnotifiedSince(symbol: String, sinceMillis: Long): List<Article> =
+        byId.values.filter { it.tickerSymbol == symbol && !it.notified && it.publishedAt >= sinceMillis }
+
+    override suspend fun markNotified(ids: List<String>) {
+        for (id in ids) {
+            byId[id]?.let { byId[id] = it.copy(notified = true) }
+        }
     }
 }
 
@@ -91,5 +104,38 @@ class NewsRepositoryTest {
         repository.refresh(ticker)
 
         assertTrue(dao.inserted.isEmpty())
+    }
+
+    @Test
+    fun `getUnnotifiedRecentArticles excludes articles outside the freshness window`() = runBlocking {
+        val dao = FakeArticleDao()
+        val now = System.currentTimeMillis()
+        dao.insertAll(
+            listOf(
+                article("finnhub", "https://fresh").copy(publishedAt = now),
+                article("finnhub", "https://stale").copy(publishedAt = now - java.util.concurrent.TimeUnit.DAYS.toMillis(3)),
+            ),
+        )
+        val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()))
+
+        val eligible = repository.getUnnotifiedRecentArticles("AAPL", java.util.concurrent.TimeUnit.DAYS.toMillis(1))
+
+        assertEquals(1, eligible.size)
+        assertEquals("https://fresh", eligible.first().url)
+    }
+
+    @Test
+    fun `markNotified excludes an article from future eligibility`() = runBlocking {
+        val dao = FakeArticleDao()
+        dao.insertAll(listOf(article("finnhub", "https://a")))
+        val repository = NewsRepository(dao, NewsSourceRegistry(emptyList()))
+        val window = java.util.concurrent.TimeUnit.DAYS.toMillis(1)
+
+        val beforeMark = repository.getUnnotifiedRecentArticles("AAPL", window)
+        repository.markNotified(beforeMark)
+        val afterMark = repository.getUnnotifiedRecentArticles("AAPL", window)
+
+        assertEquals(1, beforeMark.size)
+        assertTrue(afterMark.isEmpty())
     }
 }

@@ -28,4 +28,8 @@ class TickerRepository(private val tickerDao: TickerDao) {
         tickerDao.deleteAll()
         tickers.forEach { tickerDao.upsert(it) }
     }
+
+    suspend fun setMuted(ticker: Ticker, muted: Boolean) {
+        tickerDao.setMuted(ticker.symbol, muted)
+    }
 }

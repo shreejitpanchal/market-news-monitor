@@ -8,4 +8,5 @@ data class Ticker(
     @PrimaryKey val symbol: String,
     val companyName: String?,
     val addedAt: Long,
+    val muted: Boolean = false,
 )

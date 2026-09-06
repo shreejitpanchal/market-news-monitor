@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
@@ -77,6 +79,7 @@ fun WatchlistScreen(onTickerClick: (String) -> Unit = {}, modifier: Modifier = M
                             ticker = ticker,
                             onClick = { onTickerClick(ticker.symbol) },
                             onRemove = { viewModel.removeTicker(ticker) },
+                            onToggleMuted = { viewModel.toggleMuted(ticker) },
                         )
                     }
                 }
@@ -96,7 +99,7 @@ fun WatchlistScreen(onTickerClick: (String) -> Unit = {}, modifier: Modifier = M
 }
 
 @Composable
-private fun WatchlistRow(ticker: Ticker, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun WatchlistRow(ticker: Ticker, onClick: () -> Unit, onRemove: () -> Unit, onToggleMuted: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -106,8 +109,16 @@ private fun WatchlistRow(ticker: Ticker, onClick: () -> Unit, onRemove: () -> Un
                 Text(ticker.symbol, style = MaterialTheme.typography.titleMedium)
                 ticker.companyName?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Delete, contentDescription = "Remove ${ticker.symbol}")
+            Row {
+                IconButton(onClick = onToggleMuted) {
+                    Icon(
+                        if (ticker.muted) Icons.Filled.NotificationsOff else Icons.Filled.Notifications,
+                        contentDescription = if (ticker.muted) "Unmute ${ticker.symbol}" else "Mute ${ticker.symbol}",
+                    )
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Remove ${ticker.symbol}")
+                }
             }
         }
     }
