@@ -6,14 +6,15 @@ trading decision — not another headline aggregator.
 
 ## Status
 
-**Phases 0–3 (scaffold, watchlist CRUD, live news feed, and background
-alerts) are written**, plus a Settings export/import feature — see
-[CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-for the full plan. **Not yet verified**: `gradle/wrapper/gradle-wrapper.jar`
-still needs to be generated (open the project in Android Studio, or run
-`gradle wrapper` locally) before `./scripts/dev.sh all` can actually build
-it — see "Getting started" below. Phases 4–6 (Claude integration, trading
-depth) haven't started.
+**Phases 0–4 (scaffold, watchlist CRUD, live news feed, background
+alerts, and Claude urgency classification) are written**, plus a Settings
+export/import feature — see [CLAUDE.md](CLAUDE.md) and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full plan. Dedup
+clustering (Phase 4's third piece) is deferred — see ARCHITECTURE.md.
+**Not yet verified**: `gradle/wrapper/gradle-wrapper.jar` still needs to
+be generated (open the project in Android Studio, or run `gradle wrapper`
+locally) before `./scripts/dev.sh all` can actually build it — see
+"Getting started" below. Phase 5 (trading-specific depth) hasn't started.
 
 ## Who it's for
 

@@ -113,7 +113,11 @@ Each phase ships something actually usable, not just a milestone.
 4. **Background alerts** — WorkManager periodic poll + diffing against
    already-seen articles, local notifications with per-ticker mute.
 5. **Claude comes online** — API key settings screen, per-article urgency
-   badge + "why it matters," dedup clustering.
+   badge + "why it matters," dedup clustering. Shipped: urgency badge +
+   why-it-matters, via one batched Haiku call per ticker per refresh.
+   **Dedup clustering deferred** — needs its own schema (a grouping) and
+   merged-card UI on top of classification; cross-outlet duplicates
+   currently just show as separate cards.
 6. **Trading-specific depth** — SEC filings feed, earnings-calendar-aware
    alert sensitivity, pre-market digest notification, home-screen widget.
 

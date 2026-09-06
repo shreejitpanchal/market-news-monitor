@@ -27,4 +27,23 @@ interface ArticleDao {
 
     @Query("UPDATE articles SET notified = 1 WHERE id IN (:ids)")
     suspend fun markNotified(ids: List<String>)
+
+    @Query("SELECT * FROM articles WHERE tickerSymbol = :symbol AND urgency IS NULL ORDER BY publishedAt DESC LIMIT :limit")
+    suspend fun getUnclassified(symbol: String, limit: Int): List<Article>
+
+    @Query("UPDATE articles SET urgency = :urgency, whyItMatters = :whyItMatters WHERE id = :id")
+    suspend fun updateClassification(id: String, urgency: String, whyItMatters: String)
+
+    /** Highest-severity urgency among a ticker's articles published inside the window, or null if none classified yet. */
+    @Query(
+        "SELECT urgency FROM articles WHERE tickerSymbol = :symbol AND urgency IS NOT NULL AND publishedAt >= :sinceMillis " +
+            "ORDER BY CASE urgency WHEN 'hot' THEN 0 WHEN 'warm' THEN 1 WHEN 'calm' THEN 2 ELSE 3 END LIMIT 1",
+    )
+    suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String?
+
+    /** Reactive, all-tickers version of [getLatestUrgency] — Dashboard badges update live as classification completes. */
+    @Query("SELECT tickerSymbol, urgency FROM articles WHERE urgency IS NOT NULL AND publishedAt >= :sinceMillis")
+    fun observeUrgenciesSince(sinceMillis: Long): Flow<List<TickerUrgency>>
 }
+
+data class TickerUrgency(val tickerSymbol: String, val urgency: String)

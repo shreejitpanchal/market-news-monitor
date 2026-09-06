@@ -5,6 +5,8 @@ import com.marketnewsmonitor.app.data.backup.BackupRepository
 import com.marketnewsmonitor.app.data.local.AppDatabase
 import com.marketnewsmonitor.app.data.notifications.NotificationHelper
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
+import com.marketnewsmonitor.app.data.remote.claude.ClaudeApi
+import com.marketnewsmonitor.app.data.remote.claude.ClaudeArticleClassifier
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubApi
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
@@ -33,13 +35,21 @@ class AppContainer(context: Context) {
     val notificationHelper = NotificationHelper(context)
 
     private val okHttpClient = OkHttpClient()
+    private val jsonConverterFactory = Json { ignoreUnknownKeys = true }.asConverterFactory("application/json".toMediaType())
 
     private val finnhubApi: FinnhubApi = Retrofit.Builder()
         .baseUrl(FinnhubApi.BASE_URL)
         .client(okHttpClient)
-        .addConverterFactory(Json { ignoreUnknownKeys = true }.asConverterFactory("application/json".toMediaType()))
+        .addConverterFactory(jsonConverterFactory)
         .build()
         .create(FinnhubApi::class.java)
+
+    private val claudeApi: ClaudeApi = Retrofit.Builder()
+        .baseUrl(ClaudeApi.BASE_URL)
+        .client(okHttpClient)
+        .addConverterFactory(jsonConverterFactory)
+        .build()
+        .create(ClaudeApi::class.java)
 
     private val newsSourceRegistry = NewsSourceRegistry(
         listOf(
@@ -48,5 +58,7 @@ class AppContainer(context: Context) {
         ),
     )
 
-    val newsRepository = NewsRepository(database.articleDao(), newsSourceRegistry)
+    private val articleClassifier = ClaudeArticleClassifier(claudeApi) { secureSettingsStore.getClaudeApiKey() }
+
+    val newsRepository = NewsRepository(database.articleDao(), newsSourceRegistry, articleClassifier)
 }

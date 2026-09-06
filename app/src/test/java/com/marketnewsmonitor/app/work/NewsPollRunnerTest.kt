@@ -2,11 +2,14 @@ package com.marketnewsmonitor.app.work
 
 import com.marketnewsmonitor.app.data.local.dao.ArticleDao
 import com.marketnewsmonitor.app.data.local.dao.TickerDao
+import com.marketnewsmonitor.app.data.local.dao.TickerUrgency
 import com.marketnewsmonitor.app.data.local.entity.Article
 import com.marketnewsmonitor.app.data.local.entity.Ticker
 import com.marketnewsmonitor.app.data.notifications.ArticleNotifier
 import com.marketnewsmonitor.app.data.remote.NewsSource
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
+import com.marketnewsmonitor.app.data.remote.claude.ArticleClassification
+import com.marketnewsmonitor.app.data.remote.claude.ArticleClassifier
 import com.marketnewsmonitor.app.repository.NewsRepository
 import com.marketnewsmonitor.app.repository.TickerRepository
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +49,21 @@ private class FakeArticleDao : ArticleDao {
     override suspend fun markNotified(ids: List<String>) {
         for (id in ids) byId[id]?.let { byId[id] = it.copy(notified = true) }
     }
+
+    override suspend fun getUnclassified(symbol: String, limit: Int): List<Article> =
+        byId.values.filter { it.tickerSymbol == symbol && it.urgency == null }.take(limit)
+
+    override suspend fun updateClassification(id: String, urgency: String, whyItMatters: String) {
+        byId[id]?.let { byId[id] = it.copy(urgency = urgency, whyItMatters = whyItMatters) }
+    }
+
+    override suspend fun getLatestUrgency(symbol: String, sinceMillis: Long): String? = null
+
+    override fun observeUrgenciesSince(sinceMillis: Long): Flow<List<TickerUrgency>> = MutableStateFlow(emptyList())
+}
+
+private class NoopArticleClassifier : ArticleClassifier {
+    override suspend fun classify(ticker: Ticker, articles: List<Article>): Map<String, ArticleClassification> = emptyMap()
 }
 
 private class FakeArticleNotifier(private val throwFor: String? = null) : ArticleNotifier {
@@ -81,7 +99,7 @@ class NewsPollRunnerTest {
         val tickerDao = FakeTickerDao(
             listOf(Ticker("AAPL", "Apple", 0L, muted = true), Ticker("TSLA", "Tesla", 0L, muted = false)),
         )
-        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())))
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier()
         val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
 
@@ -93,7 +111,7 @@ class NewsPollRunnerTest {
     @Test
     fun `notifies and marks notified only for fresh unmuted-ticker articles`() = runBlocking {
         val tickerDao = FakeTickerDao(listOf(Ticker("AAPL", "Apple", 0L, muted = false)))
-        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())))
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier()
         val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
 
@@ -106,7 +124,7 @@ class NewsPollRunnerTest {
     @Test
     fun `an unexpected error for one ticker does not stop the rest of the poll`() = runBlocking {
         val tickerDao = FakeTickerDao(listOf(Ticker("BAD", "Bad Co", 0L), Ticker("AAPL", "Apple", 0L)))
-        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())))
+        val newsRepository = NewsRepository(FakeArticleDao(), NewsSourceRegistry(listOf(perTickerSource())), NoopArticleClassifier())
         val notifier = FakeArticleNotifier(throwFor = "BAD")
         val runner = NewsPollRunner(TickerRepository(tickerDao), newsRepository, notifier)
 

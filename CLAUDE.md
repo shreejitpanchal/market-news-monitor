@@ -11,14 +11,14 @@ distribution: sideloaded on one phone, no Play Store release, no accounts,
 no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
-**Current status: Phase 0 (scaffold) through Phase 3 (background alerts)
-are written**, plus a Settings export/import feature added ahead of its
-normal Phase 5 slot (see Roadmap below) because export/import needed
-somewhere to store the Claude and Finnhub API keys. **Not yet verified** —
-`gradle/wrapper/gradle-wrapper.jar` isn't checked in (see Commands below),
-so no `./gradlew` command has actually been run against this code yet.
-Don't treat the roadmap checkboxes as "tested and working" until that
-first build/test run comes back clean.
+**Current status: Phase 0 (scaffold) through Phase 4 (Claude
+classification) are written**, plus a Settings export/import feature
+added ahead of its normal Phase 5 slot (see Roadmap below) because
+export/import needed somewhere to store the Claude and Finnhub API keys.
+**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked in
+(see Commands below), so no `./gradlew` command has actually been run
+against this code yet. Don't treat the roadmap checkboxes as "tested and
+working" until that first build/test run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -78,6 +78,21 @@ first build/test run comes back clean.
   backfill as one giant notification. Backfill articles still get
   inserted and are visible in ticker detail — they just never notify.
   See `NewsPollRunner.NOTIFICATION_FRESHNESS_WINDOW_MILLIS`.
+- **Dedup clustering (near-duplicate stories from different outlets
+  merged into one card) is deferred, not built.** Phase 4 shipped urgency
+  + "why it matters" only — Finnhub/Google News RSS already dedup by
+  exact URL, so cross-outlet duplicates just show as separate cards for
+  now. Clustering needs its own schema (a grouping) and merged-card UI;
+  don't assume it exists just because classification does.
+- **Classification is batched per ticker per refresh (one Haiku call for
+  every unclassified article), not one call per article.** Cheaper, and
+  the natural unit for the deferred clustering pass above, which needs to
+  see articles together anyway. Capped at
+  `ClaudeArticleClassifier.MAX_ARTICLES_PER_CALL` (20) per call; a bigger
+  backlog is picked up over subsequent polls rather than one unbounded
+  prompt. A missing/invalid key, or a malformed/failed response, is a
+  silent no-op — articles stay unclassified and are retried next refresh,
+  never a crash.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -152,7 +167,7 @@ here as each phase actually lands:
 - [x] Phase 1 — watchlist CRUD, no live news yet (unverified — see Status above)
 - [x] Phase 2 — live news feed (Finnhub + Google News RSS) (unverified — see Status above)
 - [x] Phase 3 — background alerts (WorkManager + notifications) (unverified — see Status above)
-- [ ] Phase 4 — Claude integration (classification, urgency badges)
+- [x] Phase 4 — Claude integration (classification, urgency badges) (unverified — see Status above; dedup clustering deferred)
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
 
 ## Commands

@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marketnewsmonitor.app.data.local.entity.Article
+import com.marketnewsmonitor.app.ui.components.UrgencyBadge
 import java.text.DateFormat
 import java.util.Date
 
@@ -111,8 +112,12 @@ fun TickerDetailScreen(symbol: String, onBack: () -> Unit, modifier: Modifier = 
 @Composable
 private fun ArticleRow(article: Article, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(article.headline, style = MaterialTheme.typography.titleSmall)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                UrgencyBadge(article.urgency)
+                Text(article.headline, style = MaterialTheme.typography.titleSmall)
+            }
+            article.whyItMatters?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Text(
                 "${article.sourceId} · ${DateFormat.getDateInstance().format(Date(article.publishedAt))}",
                 style = MaterialTheme.typography.bodySmall,
