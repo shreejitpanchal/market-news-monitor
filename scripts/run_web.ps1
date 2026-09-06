@@ -33,12 +33,21 @@ $WebappLog = Join-Path $LogDir "run_web_webapp.log"
 
 $ProxyPort = 8787
 $WebPort = 19001
-$DevServerUrl = "http://localhost:$WebPort"
+# https, not http: webapp/webpack.config.d/devServer.js serves over HTTPS
+# with a self-signed cert (scripts/gen_dev_cert.sh) -- Chrome will flag it
+# as untrusted the first visit, click through once.
+$DevServerUrl = "https://localhost:$WebPort"
 
 $GradleArgs = ""
 if ($Debug) {
     $GradleArgs = "--info --stacktrace"
     Write-Host "Debug logging enabled: $GradleArgs"
+}
+
+$CertDir = Join-Path $RepoRoot "webapp\certs"
+if (-not (Test-Path (Join-Path $CertDir "localhost-cert.pem")) -or -not (Test-Path (Join-Path $CertDir "localhost-key.pem"))) {
+    Write-Host "No dev cert found -- generating one via scripts/gen_dev_cert.sh (requires git-bash's openssl on PATH)..."
+    & bash "$PSScriptRoot\gen_dev_cert.sh"
 }
 
 function Test-PortOpen {

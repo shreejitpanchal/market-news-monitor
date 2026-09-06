@@ -61,7 +61,9 @@ private val httpClient = HttpClient(CIO)
 fun main() {
     embeddedServer(Netty, port = PORT, host = "127.0.0.1") {
         install(CORS) {
-            allowHost(WEBAPP_DEV_ORIGIN)
+            // https, not just http: the webapp dev server serves over
+            // HTTPS with a self-signed cert (see webapp/webpack.config.d/devServer.js).
+            allowHost(WEBAPP_DEV_ORIGIN, schemes = listOf("http", "https"))
             allowHeader(HttpHeaders.ContentType)
             allowMethod(HttpMethod.Get)
             allowMethod(HttpMethod.Post)

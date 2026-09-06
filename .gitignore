@@ -17,6 +17,10 @@
 *.jks
 *.keystore
 
+# Self-signed dev cert for the webapp dev server (scripts/gen_dev_cert.sh
+# regenerates it) — not a real secret, but no private key belongs in git.
+/webapp/certs/
+
 # Never commit the Claude API key or any local secrets file
 secrets.properties
 *.env

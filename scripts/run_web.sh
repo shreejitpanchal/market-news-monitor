@@ -29,11 +29,19 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_DIR="$SCRIPT_DIR/logs"
 PROXY_PORT=8787
 WEB_PORT=19001
-DEV_SERVER_URL="http://localhost:$WEB_PORT"
+# https, not http: webapp/webpack.config.d/devServer.js serves over HTTPS
+# with a self-signed cert (scripts/gen_dev_cert.sh) -- Chrome will flag it
+# as untrusted the first visit, click through once.
+DEV_SERVER_URL="https://localhost:$WEB_PORT"
 
 mkdir -p "$LOG_DIR"
 cd "$REPO_ROOT"
 export NO_COLOR=1
+
+if [ ! -f "$REPO_ROOT/webapp/certs/localhost-cert.pem" ] || [ ! -f "$REPO_ROOT/webapp/certs/localhost-key.pem" ]; then
+    echo "No dev cert found -- generating one via scripts/gen_dev_cert.sh..."
+    "$SCRIPT_DIR/gen_dev_cert.sh"
+fi
 
 GRADLE_ARGS=()
 for arg in "$@"; do

@@ -93,6 +93,24 @@ first real run comes back clean.
   actually accepts a connection before opening Chrome, rather than a
   fixed sleep, since first-run toolchain downloads make a
   short guess unreliable.
+- **The webapp dev server is served over HTTPS with a self-signed
+  localhost cert**, explicitly requested — not for the proxy, which
+  stays plain HTTP (it's `127.0.0.1`-only already; a cert there would
+  add a trust step without protecting anything new). `scripts/
+  gen_dev_cert.sh` generates `webapp/certs/localhost-{cert,key}.pem`
+  (gitignored — not a real secret, but no private key belongs in git;
+  both `run_web.ps1`/`.sh` auto-generate it on first run if missing), a
+  825-day cert with `subjectAltName=DNS:localhost,IP:127.0.0.1` (modern
+  Chrome requires SAN, not just CN). Wired in via `webapp/webpack.config.d/
+  devServer.js`'s `server: { type: "https", options: { key, cert } }` —
+  falls back to plain HTTP with a console warning if the cert files are
+  missing, rather than failing to start. Chrome will flag the cert as
+  untrusted on first visit (expected for self-signed — click through).
+  The proxy's CORS `allowHost` now allows both `http` and `https`
+  schemes for the webapp origin accordingly. The webapp's own calls to
+  the proxy stay `http://localhost:8787` even from the HTTPS page —
+  Chrome doesn't apply mixed-content blocking to loopback addresses, so
+  this isn't a mixed-content violation.
 - **AI integration is a Claude API key, not subscription auth.** Reusing a
   Claude.ai Pro/Max login isn't a supported integration path for
   third-party apps — Anthropic doesn't expose that as an API. Don't
