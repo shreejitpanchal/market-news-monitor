@@ -13,10 +13,10 @@ through news noise, not as a product for distribution.
 
 - **Dashboard** — every tracked ticker as a card with an urgency badge
   (hot/warm/calm), so triage happens before you open anything.
-- **Watchlist → Ticker detail** — add/remove tickers; tap one for a
-  de-duplicated news feed, pulled from Finnhub, Google News, and SEC
-  EDGAR filings, with sources cited and an AI "why it matters" line per
-  story.
+- **Watchlist → Ticker detail** — add/remove tickers, with symbol/company
+  name suggestions as you type; tap one for a de-duplicated news feed,
+  pulled from Finnhub, Google News, and SEC EDGAR filings, with sources
+  cited and an AI "why it matters" line per story.
 - **AI classification** — Claude Haiku scores each new article's
   urgency and writes a one-line "why it matters," so the badges and
   feed reflect what's actually worth attention, not just what's new.
@@ -46,8 +46,9 @@ A personal information-triage tool, not investment advice. AI urgency
 scores are a filter to help you notice things faster, not a signal to
 trade on unexamined.
 
-If you fill in the "Your info" name/email fields in Settings, that
-information is sent in plain text to SEC EDGAR's servers with every
-filings request — required by their fair-access policy so requests are
-traceable to a real requester. It is not sent to any other data source
-this app uses (Finnhub, Google News RSS, or the Claude API).
+On first launch, the app asks for your name and email (also editable
+later under Settings → "Your info"). That information is sent in plain
+text to SEC EDGAR's servers with every filings request — required by
+their fair-access policy so requests are traceable to a real requester.
+It is not sent to any other data source this app uses (Finnhub, Google
+News RSS, or the Claude API).

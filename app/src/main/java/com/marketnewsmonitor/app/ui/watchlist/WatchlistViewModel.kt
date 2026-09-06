@@ -7,17 +7,29 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.marketnewsmonitor.app.MarketNewsMonitorApp
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.remote.finnhub.TickerSuggestion
+import com.marketnewsmonitor.app.data.remote.finnhub.TickerSymbolSearch
 import com.marketnewsmonitor.app.repository.TickerRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class WatchlistViewModel(private val tickerRepository: TickerRepository) : ViewModel() {
+class WatchlistViewModel(
+    private val tickerRepository: TickerRepository,
+    private val tickerSymbolSearch: TickerSymbolSearch,
+) : ViewModel() {
 
     private val query = MutableStateFlow("")
+
+    private val _tickerSuggestions = MutableStateFlow<List<TickerSuggestion>>(emptyList())
+    val tickerSuggestions: StateFlow<List<TickerSuggestion>> = _tickerSuggestions.asStateFlow()
+    private var suggestionSearchJob: Job? = null
 
     val tickers: StateFlow<List<Ticker>> =
         combine(tickerRepository.observeTickers(), query) { tickers, q ->
@@ -35,6 +47,24 @@ class WatchlistViewModel(private val tickerRepository: TickerRepository) : ViewM
         query.value = value
     }
 
+    /** Debounced so every keystroke in the Add Ticker dialog doesn't fire its own network call. */
+    fun onAddTickerSymbolChange(value: String) {
+        suggestionSearchJob?.cancel()
+        if (value.isBlank()) {
+            _tickerSuggestions.value = emptyList()
+            return
+        }
+        suggestionSearchJob = viewModelScope.launch {
+            delay(SUGGESTION_DEBOUNCE_MILLIS)
+            _tickerSuggestions.value = tickerSymbolSearch.search(value)
+        }
+    }
+
+    fun clearTickerSuggestions() {
+        suggestionSearchJob?.cancel()
+        _tickerSuggestions.value = emptyList()
+    }
+
     fun addTicker(symbol: String, companyName: String?) {
         if (symbol.isBlank()) return
         viewModelScope.launch { tickerRepository.addTicker(symbol, companyName) }
@@ -49,10 +79,12 @@ class WatchlistViewModel(private val tickerRepository: TickerRepository) : ViewM
     }
 
     companion object {
+        private const val SUGGESTION_DEBOUNCE_MILLIS = 300L
+
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as MarketNewsMonitorApp
-                WatchlistViewModel(app.container.tickerRepository)
+                WatchlistViewModel(app.container.tickerRepository, app.container.tickerSymbolSearch)
             }
         }
     }

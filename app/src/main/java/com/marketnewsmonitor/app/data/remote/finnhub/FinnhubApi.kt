@@ -21,10 +21,26 @@ interface FinnhubApi {
         @Query("token") token: String,
     ): FinnhubEarningsCalendarResponse
 
+    @GET("search")
+    suspend fun symbolSearch(
+        @Query("q") query: String,
+        @Query("token") token: String,
+    ): FinnhubSymbolSearchResponse
+
     companion object {
         const val BASE_URL = "https://finnhub.io/api/v1/"
     }
 }
+
+@Serializable
+data class FinnhubSymbolSearchResponse(val result: List<FinnhubSymbolSearchResult> = emptyList())
+
+@Serializable
+data class FinnhubSymbolSearchResult(
+    val symbol: String = "",
+    val description: String = "",
+    val type: String = "",
+)
 
 @Serializable
 data class FinnhubNewsDto(

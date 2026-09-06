@@ -13,15 +13,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.marketnewsmonitor.app.MarketNewsMonitorApp
 import com.marketnewsmonitor.app.ui.dashboard.DashboardScreen
+import com.marketnewsmonitor.app.ui.onboarding.ProfileOnboardingScreen
 import com.marketnewsmonitor.app.ui.settings.SettingsScreen
 import com.marketnewsmonitor.app.ui.tickerdetail.TickerDetailScreen
 import com.marketnewsmonitor.app.ui.watchlist.WatchlistScreen
@@ -36,6 +42,14 @@ private const val TICKER_DETAIL_ROUTE = "ticker"
 
 @Composable
 fun MarketNewsMonitorNavHost(startTickerSymbol: String? = null) {
+    val appContext = LocalContext.current.applicationContext as MarketNewsMonitorApp
+    var profileComplete by remember { mutableStateOf(appContext.container.appPreferences.hasCompletedProfile) }
+
+    if (!profileComplete) {
+        ProfileOnboardingScreen(onComplete = { profileComplete = true })
+        return
+    }
+
     val navController: NavHostController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val onTopLevelDestination = TopLevelDestination.entries.any { it.route == backStackEntry?.destination?.route }

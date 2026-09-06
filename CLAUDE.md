@@ -19,12 +19,10 @@ export/import feature added ahead of its normal schedule because
 export/import needed somewhere to store the Claude and Finnhub API keys.
 Phase 4's previously-deferred dedup clustering is now built too — every
 phase on the roadmap is now implemented.
-**Still not build-verified** — `gradle/wrapper/gradle-wrapper.jar` is
-now checked in (generated 2026-09-06 via a local Gradle 8.9 install) and
-`./gradlew -v` runs, but no actual `./gradlew test`/`assembleDebug` (via
-`scripts/dev.sh all`) has been run against this code yet. Don't treat
-the roadmap checkboxes as "tested and working" until that first real
-build/test run comes back clean.
+**Builds and launches on-device** (confirmed 2026-09-06), but `./gradlew
+test`/`scripts/dev.sh all` still hasn't been run against this code —
+don't treat the roadmap checkboxes as "test-suite verified" until that
+first real run comes back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -72,6 +70,16 @@ build/test run comes back clean.
   Settings/export-import in Phase 2 alongside the news-fetching code that
   needs it, ahead of its implied Phase 5 slot, same reasoning as the
   Claude key/export-import pairing above.
+- **Add Ticker autocompletes against Finnhub's `/search` endpoint**, not
+  a bundled static symbol list — `TickerSymbolSearch` (`data/remote/
+  finnhub/TickerSymbolSearch.kt`), wired through `WatchlistViewModel.
+  onAddTickerSymbolChange` with a 300ms debounce so each keystroke
+  doesn't fire its own call. Same silent-no-op-without-a-key convention
+  as the classifier/EDGAR: no Finnhub key set means no suggestions, not
+  an error. `mapFinnhubSymbolSearch` drops foreign-exchange listings of
+  the same company (symbol contains "."), since the watchlist only
+  tracks the primary US-listed ticker, and caps at
+  `TickerSymbolSearch.MAX_SUGGESTIONS` (8).
 - **Background-poll notifications are grouped one-per-ticker, not
   one-per-article**, and tapping one opens the app to Dashboard rather
   than deep-linking to the specific ticker. Both were explicit scope
@@ -115,11 +123,27 @@ build/test run comes back clean.
   policy requires every request identify a real requester; committing a
   personal email into source (and every outbound request) was rejected —
   see `data/remote/edgar/EdgarSource.kt`'s `buildEdgarUserAgent`. Falls
-  back to a generic non-identifying string when the profile is empty, so
-  EDGAR calls degrade rather than fail before first Settings setup. The
-  name/email fields aren't secrets (plain `AppPreferences`, not
+  back to a generic non-identifying string when the profile is empty —
+  `EdgarSource.DEFAULT_USER_AGENT` — now only reachable defensively
+  (imports, migrations) since name/email are collected mandatorily below.
+  The name/email fields aren't secrets (plain `AppPreferences`, not
   `EncryptedSharedPreferences`) but are still carried through
   export/import like everything else in Settings.
+- **Name and email are collected on first launch, before any other
+  screen, and are mandatory** — `ui/onboarding/ProfileOnboardingScreen.kt`,
+  gated in `MarketNewsMonitorNavHost` via
+  `AppPreferences.hasCompletedProfile` (both fields non-blank). Reuses
+  the exact same `AppPreferences.userName`/`userEmail` keys Settings'
+  "Your info" section already read/wrote — onboarding and Settings are
+  two entry points to the same state, not a separate profile store. The
+  screen also offers "Import setup instead" (reusing `BackupRepository.
+  importFrom`) so restoring a backup with a saved name/email satisfies
+  the gate without retyping; an imported file missing either field
+  re-shows the form rather than silently passing the gate. Email is
+  validated with a plain-Kotlin regex (`isValidProfileEmail` in
+  `ProfileValidation.kt`, deliberately its own file so it stays unit-
+  testable without pulling in the screen's Compose imports) — format
+  only, no verification email is ever sent.
 - **EDGAR ticker→CIK mapping is cached in memory for the process
   lifetime, not re-fetched per poll** — it's the whole market (~1MB) and
   changes rarely. A failed fetch is deliberately *not* cached, so the

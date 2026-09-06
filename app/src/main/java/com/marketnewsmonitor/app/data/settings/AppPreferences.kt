@@ -28,6 +28,10 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_USER_EMAIL, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_USER_EMAIL, value).apply()
 
+    /** Gates the mandatory first-launch profile screen — see ProfileOnboardingScreen. */
+    val hasCompletedProfile: Boolean
+        get() = userName.isNotBlank() && userEmail.isNotBlank()
+
     /** Daily pre-market digest, fixed 8:00 AM device-local time (see DigestScheduler). Off by default. */
     var digestEnabled: Boolean
         get() = prefs.getBoolean(KEY_DIGEST_ENABLED, false)

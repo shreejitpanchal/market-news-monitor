@@ -16,6 +16,7 @@ import com.marketnewsmonitor.app.data.remote.finnhub.EarningsCalendarProvider
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubApi
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubEarningsCalendarProvider
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
+import com.marketnewsmonitor.app.data.remote.finnhub.TickerSymbolSearch
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
 import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
@@ -75,6 +76,8 @@ class AppContainer(context: Context) {
     )
 
     private val articleClassifier = ClaudeArticleClassifier(claudeApi) { secureSettingsStore.getClaudeApiKey() }
+
+    val tickerSymbolSearch = TickerSymbolSearch(finnhubApi) { secureSettingsStore.getFinnhubApiKey() }
 
     val newsRepository = NewsRepository(
         database.articleDao(),

@@ -36,11 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.remote.finnhub.TickerSuggestion
 
 @Composable
 fun WatchlistScreen(onTickerClick: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     val viewModel: WatchlistViewModel = viewModel(factory = WatchlistViewModel.Factory)
     val tickers by viewModel.tickers.collectAsState()
+    val tickerSuggestions by viewModel.tickerSuggestions.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
 
@@ -88,9 +90,15 @@ fun WatchlistScreen(onTickerClick: (String) -> Unit = {}, modifier: Modifier = M
 
     if (showAddDialog) {
         AddTickerDialog(
-            onDismiss = { showAddDialog = false },
+            suggestions = tickerSuggestions,
+            onSymbolQueryChange = viewModel::onAddTickerSymbolChange,
+            onDismiss = {
+                showAddDialog = false
+                viewModel.clearTickerSuggestions()
+            },
             onConfirm = { symbol, companyName ->
                 viewModel.addTicker(symbol, companyName)
+                viewModel.clearTickerSuggestions()
                 showAddDialog = false
             },
         )
@@ -131,26 +139,64 @@ private fun WatchlistRow(ticker: Ticker, onClick: () -> Unit, onRemove: () -> Un
 }
 
 @Composable
-private fun AddTickerDialog(onDismiss: () -> Unit, onConfirm: (symbol: String, companyName: String?) -> Unit) {
+private fun AddTickerDialog(
+    suggestions: List<TickerSuggestion>,
+    onSymbolQueryChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (symbol: String, companyName: String?) -> Unit,
+) {
     var symbol by remember { mutableStateOf("") }
     var companyName by remember { mutableStateOf("") }
+    // Suppresses the dropdown right after a suggestion is picked, so setting
+    // the fields from it doesn't immediately re-trigger a search+reopen.
+    var suppressSuggestions by remember { mutableStateOf(false) }
+
+    fun pickSuggestion(suggestion: TickerSuggestion) {
+        symbol = suggestion.symbol
+        companyName = suggestion.name
+        suppressSuggestions = true
+        onSymbolQueryChange("")
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add ticker") },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedTextField(
                     value = symbol,
-                    onValueChange = { symbol = it },
-                    label = { Text("Symbol (e.g. AAPL)") },
+                    onValueChange = {
+                        symbol = it
+                        suppressSuggestions = false
+                        onSymbolQueryChange(symbol)
+                    },
+                    label = { Text("Symbol or company name") },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                if (!suppressSuggestions && suggestions.isNotEmpty()) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        suggestions.forEach { suggestion ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { pickSuggestion(suggestion) }
+                                    .padding(vertical = 8.dp),
+                            ) {
+                                Column {
+                                    Text(suggestion.symbol, style = MaterialTheme.typography.bodyMedium)
+                                    Text(suggestion.name, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = companyName,
                     onValueChange = { companyName = it },
                     label = { Text("Company name (optional)") },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },

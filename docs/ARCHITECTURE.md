@@ -110,7 +110,16 @@ Each phase ships something actually usable, not just a milestone.
    schema (`Ticker`, `Article`, `Source`), bottom nav
    (Dashboard/Watchlist/Settings).
 2. **Watchlist, no news yet** — add/remove/search tickers, dashboard
-   renders tracked tickers as empty-state cards.
+   renders tracked tickers as empty-state cards. **Later addition:** Add
+   Ticker autocompletes symbol/company name as you type, via Finnhub's
+   `/search` endpoint (`TickerSymbolSearch`, debounced 300ms); silently
+   shows no suggestions without a Finnhub key rather than erroring.
+   **Later addition:** a mandatory first-launch profile screen
+   (`ProfileOnboardingScreen`) collects name and email before any other
+   screen is reachable — the same fields Settings' "Your info" section
+   already stored for the EDGAR User-Agent (§3), now required up front
+   instead of optional. An "Import setup instead" shortcut on that screen
+   satisfies the gate from a restored backup without retyping.
 3. **Live news feed** — Finnhub + RSS ingestion into Room, ticker-detail
    feed with clickable source links, manual refresh.
 4. **Background alerts** — WorkManager periodic poll + diffing against

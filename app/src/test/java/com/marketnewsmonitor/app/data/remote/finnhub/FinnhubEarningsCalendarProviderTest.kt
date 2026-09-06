@@ -17,6 +17,9 @@ private class FakeFinnhubApi(
         if (fail) throw java.io.IOException("network down")
         return response
     }
+
+    override suspend fun symbolSearch(query: String, token: String): FinnhubSymbolSearchResponse =
+        FinnhubSymbolSearchResponse()
 }
 
 class FinnhubEarningsCalendarProviderTest {
