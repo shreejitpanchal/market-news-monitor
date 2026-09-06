@@ -93,7 +93,15 @@ echo "Starting the webapp dev server on port $WEB_PORT in the background (log: $
 wait_for_port "$WEB_PORT" "webapp dev server" 300 || true
 
 echo "Opening $DEV_SERVER_URL in Chrome (webapp dev server is on port $WEB_PORT)..."
-cmd.exe /c start chrome "$DEV_SERVER_URL" 2>/dev/null || cmd.exe /c start "$DEV_SERVER_URL"
+# MSYS_NO_PATHCONV=1: git-bash's MSYS layer otherwise rewrites "/c" into a
+# Windows path (e.g. "C:/") before cmd.exe ever sees it as its /c switch,
+# so cmd.exe doesn't recognize a command to run and drops into an
+# interactive session instead -- the same class of bug gen_dev_cert.sh
+# already works around for openssl's "/CN=localhost". The fallback passes
+# an explicit empty title ("") so cmd's `start` doesn't mistake the URL
+# for a window title when no program name precedes it.
+MSYS_NO_PATHCONV=1 cmd.exe /c start chrome "$DEV_SERVER_URL" 2>/dev/null \
+    || MSYS_NO_PATHCONV=1 cmd.exe /c start "" "$DEV_SERVER_URL"
 
 echo "Logs: $PROXY_LOG and $WEBAPP_LOG (tail -f to follow live)."
 echo "Ctrl+C stops this script; run scripts/stop_web.sh afterward if ports $PROXY_PORT/$WEB_PORT are still in use."

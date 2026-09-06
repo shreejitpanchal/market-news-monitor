@@ -20,7 +20,9 @@ stop_port() {
     fi
     for pid in $pids; do
         echo "Stopping $name (port $port, PID $pid)..."
-        taskkill //PID "$pid" //F >/dev/null 2>&1 || echo "  could not stop PID $pid (already gone?)"
+        # MSYS_NO_PATHCONV belt-and-suspenders alongside the doubled
+        # slashes -- see run_web.sh's comment on the same class of bug.
+        MSYS_NO_PATHCONV=1 taskkill //PID "$pid" //F >/dev/null 2>&1 || echo "  could not stop PID $pid (already gone?)"
     done
 }
 
