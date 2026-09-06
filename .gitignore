@@ -1,0 +1,27 @@
+# Android Studio / Gradle
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Keystores — never commit signing material
+*.jks
+*.keystore
+
+# Never commit the Claude API key or any local secrets file
+secrets.properties
+*.env
+.env.*
+
+# Log/cache
+*.log
+/app/release/
