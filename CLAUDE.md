@@ -412,7 +412,13 @@ remains the only place that actually knows how to build this repo.
 `webapp/` dev server, then open Chrome — see the `webapp/`/`server/`
 decisions above for what this Chrome client is and isn't. Copy
 `server/local.properties.example` to `server/local.properties` and fill
-in your keys before running it.
+in your keys before running it. Both processes' output is always
+captured to `scripts/logs/run_web_proxy.log` and `run_web_webapp.log`
+(gitignored) — read those (or paste them back) when something doesn't
+come up, since a spawned window's on-screen scrollback isn't always
+still there by the time anyone looks. Pass `--debug` (`.sh`) / `-Debug`
+(`.ps1`) for `--info --stacktrace` Gradle output when the plain logs
+aren't enough.
 
 `gradle/wrapper/gradle-wrapper.jar` is checked in and `./gradlew` works
 — it had to be generated via a real local Gradle install (an agent

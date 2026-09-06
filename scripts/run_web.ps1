@@ -3,19 +3,43 @@
 # and fill it in first) and the webapp/ dev server, then opens Chrome.
 # See CLAUDE.md's webapp/server decision for what this is and isn't.
 #
-# Ports are fixed, not auto-picked by webpack, so this script and Chrome
-# always agree on where things are: proxy on 8787, webapp dev server on
-# 19001 (see webDevServerPort in webapp/build.gradle.kts).
+# Ports are fixed, not auto-picked by webpack: proxy on 8787, webapp dev
+# server on 19001 (see webapp/webpack.config.d/devServer.js).
+#
+# Each spawned window's full session is captured via Start-Transcript to
+# scripts/logs/run_web_proxy.log and run_web_webapp.log -- NOT Tee-Object,
+# which doubles lines and can garble encoding for native command output
+# (see this repo's own dev-script logging conventions). Read those files
+# (or paste their contents back) when something doesn't come up; they hold
+# the actual error, not just whatever's still visible on screen.
+#
+# Pass -Debug for more diagnostic detail from Gradle itself
+# (--info --stacktrace) when the plain logs aren't enough to see why a
+# task failed or hung.
 #
 # First run will take a while: the Kotlin/Wasm toolchain + webpack tooling
 # have to download, plus Ktor's dependencies for the proxy -- this script
-# waits for each port to actually accept connections before moving on,
-# rather than guessing a fixed delay.
+# waits for each port to actually accept connections before moving on.
+
+param(
+    [switch]$Debug
+)
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+$LogDir = Join-Path $PSScriptRoot "logs"
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+$ProxyLog = Join-Path $LogDir "run_web_proxy.log"
+$WebappLog = Join-Path $LogDir "run_web_webapp.log"
+
 $ProxyPort = 8787
 $WebPort = 19001
 $DevServerUrl = "http://localhost:$WebPort"
+
+$GradleArgs = ""
+if ($Debug) {
+    $GradleArgs = "--info --stacktrace"
+    Write-Host "Debug logging enabled: $GradleArgs"
+}
 
 function Test-PortOpen {
     param([int]$Port)
@@ -42,23 +66,23 @@ function Wait-ForPort {
         }
         Start-Sleep -Seconds 2
     }
-    Write-Host "Timed out waiting for $Name on port $Port -- check its own window for the real error."
+    Write-Host "Timed out waiting for $Name on port $Port -- see $LogDir for its real output."
     return $false
 }
 
-Write-Host "Starting the local proxy (server/) on port $ProxyPort -- this window stays open with live logs..."
+Write-Host "Starting the local proxy (server/) on port $ProxyPort -- logging to $ProxyLog ..."
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location `"$RepoRoot`"; & .\gradlew.bat :server:run"
+    "Set-Location `"$RepoRoot`"; Start-Transcript -Path `"$ProxyLog`" -Append | Out-Null; & .\gradlew.bat :server:run $GradleArgs"
 )
 Wait-ForPort -Port $ProxyPort -Name "proxy" | Out-Null
 
-Write-Host "Starting the webapp dev server on port $WebPort -- this window stays open with live logs..."
+Write-Host "Starting the webapp dev server on port $WebPort -- logging to $WebappLog ..."
 Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "Set-Location `"$RepoRoot`"; & .\gradlew.bat :webapp:wasmJsBrowserDevelopmentRun"
+    "Set-Location `"$RepoRoot`"; Start-Transcript -Path `"$WebappLog`" -Append | Out-Null; & .\gradlew.bat :webapp:wasmJsBrowserDevelopmentRun $GradleArgs"
 )
 $ready = Wait-ForPort -Port $WebPort -Name "webapp dev server" -TimeoutSeconds 300
 
@@ -71,5 +95,7 @@ try {
 }
 
 if (-not $ready) {
-    Write-Host "Note: the dev server never reported ready on port $WebPort before Chrome opened -- if the page is blank, check that window's output, then refresh $DevServerUrl once it's up."
+    Write-Host "Note: the dev server never reported ready on port $WebPort before Chrome opened -- check $WebappLog for the real error, then refresh $DevServerUrl once it's up."
 }
+
+Write-Host "Logs: $ProxyLog and $WebappLog"
