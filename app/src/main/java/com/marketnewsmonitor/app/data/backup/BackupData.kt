@@ -17,9 +17,13 @@ data class BackupData(
     val apiKey: String?,
     // Added in version 2 — defaulted so version-1 export files still decode.
     val finnhubApiKey: String? = null,
+    // Added in version 3 (Phase 5a) — not secrets, just the SEC EDGAR
+    // User-Agent identity. Defaulted so older exports still decode.
+    val userName: String = "",
+    val userEmail: String = "",
 ) {
     companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
     }
 }
 

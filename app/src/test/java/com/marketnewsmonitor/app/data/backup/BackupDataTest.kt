@@ -19,6 +19,8 @@ class BackupDataTest {
             ),
             apiKey = "sk-ant-test-key",
             finnhubApiKey = "finnhub-test-key",
+            userName = "Shreejit",
+            userEmail = "shreejit@example.com",
         )
 
         val encoded = json.encodeToString(BackupData.serializer(), original)
@@ -26,10 +28,11 @@ class BackupDataTest {
 
         assertEquals(original, decoded)
         assertEquals(true, decoded.tickers.first { it.symbol == "AAPL" }.muted)
+        assertEquals("Shreejit", decoded.userName)
     }
 
     @Test
-    fun `decoding a version-1 export without muted or finnhubApiKey uses safe defaults`() {
+    fun `decoding a version-1 export without muted, finnhubApiKey, or profile uses safe defaults`() {
         val versionOneJson = """
             {"version":1,"exportedAt":1,"tickers":[{"symbol":"AAPL","companyName":null,"addedAt":1}],"apiKey":null}
         """.trimIndent()
@@ -38,6 +41,8 @@ class BackupDataTest {
 
         assertEquals(false, decoded.tickers.first().muted)
         assertNull(decoded.finnhubApiKey)
+        assertEquals("", decoded.userName)
+        assertEquals("", decoded.userEmail)
     }
 
     @Test

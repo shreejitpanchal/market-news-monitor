@@ -12,13 +12,16 @@ no other users. Every architectural choice below optimizes for "cheapest
 thing that actually works for one person" over "correct for a public app."
 
 **Current status: Phase 0 (scaffold) through Phase 4 (Claude
-classification) are written**, plus a Settings export/import feature
-added ahead of its normal Phase 5 slot (see Roadmap below) because
-export/import needed somewhere to store the Claude and Finnhub API keys.
-**Not yet verified** — `gradle/wrapper/gradle-wrapper.jar` isn't checked in
-(see Commands below), so no `./gradlew` command has actually been run
-against this code yet. Don't treat the roadmap checkboxes as "tested and
-working" until that first build/test run comes back clean.
+classification) are written, plus the SEC EDGAR filings slice of Phase 5**
+("trading-specific depth" — the other three pieces, earnings-aware
+sensitivity/pre-market digest/widget, are still unbuilt; see Roadmap
+below), plus a Settings export/import feature added ahead of its normal
+schedule because export/import needed somewhere to store the Claude and
+Finnhub API keys. **Not yet verified** — `gradle/wrapper/gradle-wrapper.jar`
+isn't checked in (see Commands below), so no `./gradlew` command has
+actually been run against this code yet. Don't treat the roadmap
+checkboxes as "tested and working" until that first build/test run comes
+back clean.
 
 ## Decisions already made — don't re-litigate these without new information
 
@@ -93,6 +96,20 @@ working" until that first build/test run comes back clean.
   prompt. A missing/invalid key, or a malformed/failed response, is a
   silent no-op — articles stay unclassified and are retried next refresh,
   never a crash.
+- **SEC EDGAR's required User-Agent is built from a Settings "Your info"
+  profile (name/email), never hardcoded in source.** SEC's fair-access
+  policy requires every request identify a real requester; committing a
+  personal email into source (and every outbound request) was rejected —
+  see `data/remote/edgar/EdgarSource.kt`'s `buildEdgarUserAgent`. Falls
+  back to a generic non-identifying string when the profile is empty, so
+  EDGAR calls degrade rather than fail before first Settings setup. The
+  name/email fields aren't secrets (plain `AppPreferences`, not
+  `EncryptedSharedPreferences`) but are still carried through
+  export/import like everything else in Settings.
+- **EDGAR ticker→CIK mapping is cached in memory for the process
+  lifetime, not re-fetched per poll** — it's the whole market (~1MB) and
+  changes rarely. A failed fetch is deliberately *not* cached, so the
+  next call retries instead of permanently disabling EDGAR until restart.
 - **Data budget: free-tier APIs only**, chosen for *latency*, not just
   cost — NewsAPI's free tier has a 24-hour article delay and is
   explicitly excluded from the alerting path for that reason (see
@@ -113,7 +130,7 @@ making a structural change. Summary:
   directly.
 - **News sources are a small engine/registry pattern**, not one
   monolithic fetcher — one class per source (`FinnhubSource`,
-  `GoogleNewsRssSource`, and eventually `EdgarSource`) behind the
+  `GoogleNewsRssSource`, `EdgarSource`) behind the
   `NewsSource` interface, looked up from `NewsSourceRegistry` the way
   `coding-adventure`'s `app/execution/registry.py` looks up one
   `ExecutionEngine` per language. Adding a data source later (a paid
@@ -169,6 +186,10 @@ here as each phase actually lands:
 - [x] Phase 3 — background alerts (WorkManager + notifications) (unverified — see Status above)
 - [x] Phase 4 — Claude integration (classification, urgency badges) (unverified — see Status above; dedup clustering deferred)
 - [ ] Phase 5 — trading-specific depth (filings, earnings-aware alerts, widget)
+  - [x] SEC filings feed (EDGAR 8-K/Form 4 via the existing news registry) (unverified — see Status above)
+  - [ ] Earnings-calendar-aware alert sensitivity
+  - [ ] Pre-market digest notification (Claude Sonnet)
+  - [ ] Home-screen widget
 
 ## Commands
 

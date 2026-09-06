@@ -42,6 +42,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val claudeApiKey by viewModel.claudeApiKey.collectAsState()
     val finnhubApiKey by viewModel.finnhubApiKey.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val userEmail by viewModel.userEmail.collectAsState()
     val pollingEnabled by viewModel.pollingEnabled.collectAsState()
     val pollIntervalMinutes by viewModel.pollIntervalMinutes.collectAsState()
     val status by viewModel.status.collectAsState()
@@ -67,6 +69,14 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        UserProfileFields(
+            name = userName,
+            email = userEmail,
+            onSave = viewModel::saveUserProfile,
+        )
+
+        HorizontalDivider()
+
         ApiKeyField(
             title = "Claude API key",
             storedValue = claudeApiKey,
@@ -156,6 +166,39 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             },
             dismissButton = { TextButton(onClick = { pendingImportUri = null }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun UserProfileFields(name: String, email: String, onSave: (name: String, email: String) -> Unit) {
+    var nameInput by remember(name) { mutableStateOf(name) }
+    var emailInput by remember(email) { mutableStateOf(email) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Your info", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Used to identify you to SEC EDGAR when fetching filings — its fair-access " +
+                "policy requires every request to be traceable to a real requester. Never sent anywhere else.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        OutlinedTextField(
+            value = nameInput,
+            onValueChange = { nameInput = it },
+            label = { Text("Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = emailInput,
+            onValueChange = { emailInput = it },
+            label = { Text("Email") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = { onSave(nameInput, emailInput) },
+            enabled = nameInput != name || emailInput != email,
+        ) { Text("Save info") }
     }
 }
 

@@ -3,6 +3,7 @@ package com.marketnewsmonitor.app.data.backup
 import android.content.Context
 import android.net.Uri
 import com.marketnewsmonitor.app.data.local.entity.Ticker
+import com.marketnewsmonitor.app.data.settings.AppPreferences
 import com.marketnewsmonitor.app.data.settings.SecureSettingsStore
 import com.marketnewsmonitor.app.repository.TickerRepository
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ class BackupRepository(
     private val context: Context,
     private val tickerRepository: TickerRepository,
     private val secureSettingsStore: SecureSettingsStore,
+    private val appPreferences: AppPreferences,
 ) {
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
@@ -25,6 +27,8 @@ class BackupRepository(
             },
             apiKey = secureSettingsStore.getClaudeApiKey(),
             finnhubApiKey = secureSettingsStore.getFinnhubApiKey(),
+            userName = appPreferences.userName,
+            userEmail = appPreferences.userEmail,
         )
         val resolver = context.contentResolver
         resolver.openOutputStream(uri)?.use { out ->
@@ -43,5 +47,7 @@ class BackupRepository(
         )
         secureSettingsStore.setClaudeApiKey(backup.apiKey)
         secureSettingsStore.setFinnhubApiKey(backup.finnhubApiKey)
+        appPreferences.userName = backup.userName
+        appPreferences.userEmail = backup.userEmail
     }
 }

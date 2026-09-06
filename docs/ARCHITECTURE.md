@@ -120,6 +120,11 @@ Each phase ships something actually usable, not just a milestone.
    currently just show as separate cards.
 6. **Trading-specific depth** — SEC filings feed, earnings-calendar-aware
    alert sensitivity, pre-market digest notification, home-screen widget.
+   **Shipped: the SEC filings feed** — `EdgarSource` is just another
+   `NewsSource` (see §1's registry pattern), so filings flow through the
+   existing Room table, classifier, notifications, and UI unchanged. The
+   other three pieces (earnings-aware sensitivity, digest, widget) are
+   still unbuilt.
 
 ## 5. Stretch ideas (not scheduled)
 

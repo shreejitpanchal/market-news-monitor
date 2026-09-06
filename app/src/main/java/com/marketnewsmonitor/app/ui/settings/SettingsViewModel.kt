@@ -44,6 +44,12 @@ class SettingsViewModel(
     private val _pollIntervalMinutes = MutableStateFlow(appPreferences.pollIntervalMinutes)
     val pollIntervalMinutes: StateFlow<Long> = _pollIntervalMinutes.asStateFlow()
 
+    private val _userName = MutableStateFlow(appPreferences.userName)
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _userEmail = MutableStateFlow(appPreferences.userEmail)
+    val userEmail: StateFlow<String> = _userEmail.asStateFlow()
+
     private val _status = MutableStateFlow<BackupStatus>(BackupStatus.Idle)
     val status: StateFlow<BackupStatus> = _status.asStateFlow()
 
@@ -82,6 +88,13 @@ class SettingsViewModel(
         }
     }
 
+    fun saveUserProfile(name: String, email: String) {
+        appPreferences.userName = name.trim()
+        appPreferences.userEmail = email.trim()
+        _userName.value = appPreferences.userName
+        _userEmail.value = appPreferences.userEmail
+    }
+
     fun exportSetup(uri: Uri) {
         _status.value = BackupStatus.Exporting
         viewModelScope.launch {
@@ -101,6 +114,8 @@ class SettingsViewModel(
                 backupRepository.importFrom(uri)
                 _claudeApiKey.value = secureSettingsStore.getClaudeApiKey().orEmpty()
                 _finnhubApiKey.value = secureSettingsStore.getFinnhubApiKey().orEmpty()
+                _userName.value = appPreferences.userName
+                _userEmail.value = appPreferences.userEmail
                 BackupStatus.Success("Setup imported. Watchlist and API keys restored.")
             } catch (e: Exception) {
                 BackupStatus.Error("Import failed: ${e.message}")

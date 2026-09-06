@@ -7,6 +7,9 @@ import com.marketnewsmonitor.app.data.notifications.NotificationHelper
 import com.marketnewsmonitor.app.data.remote.NewsSourceRegistry
 import com.marketnewsmonitor.app.data.remote.claude.ClaudeApi
 import com.marketnewsmonitor.app.data.remote.claude.ClaudeArticleClassifier
+import com.marketnewsmonitor.app.data.remote.edgar.EdgarApi
+import com.marketnewsmonitor.app.data.remote.edgar.EdgarSource
+import com.marketnewsmonitor.app.data.remote.edgar.buildEdgarUserAgent
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubApi
 import com.marketnewsmonitor.app.data.remote.finnhub.FinnhubSource
 import com.marketnewsmonitor.app.data.remote.rss.GoogleNewsRssSource
@@ -30,8 +33,8 @@ class AppContainer(context: Context) {
 
     val tickerRepository = TickerRepository(database.tickerDao())
     val secureSettingsStore = SecureSettingsStore(context)
-    val backupRepository = BackupRepository(context, tickerRepository, secureSettingsStore)
     val appPreferences = AppPreferences(context)
+    val backupRepository = BackupRepository(context, tickerRepository, secureSettingsStore, appPreferences)
     val notificationHelper = NotificationHelper(context)
 
     private val okHttpClient = OkHttpClient()
@@ -51,10 +54,18 @@ class AppContainer(context: Context) {
         .build()
         .create(ClaudeApi::class.java)
 
+    private val edgarApi: EdgarApi = Retrofit.Builder()
+        .baseUrl(EdgarApi.BASE_URL)
+        .client(okHttpClient)
+        .addConverterFactory(jsonConverterFactory)
+        .build()
+        .create(EdgarApi::class.java)
+
     private val newsSourceRegistry = NewsSourceRegistry(
         listOf(
             FinnhubSource(finnhubApi) { secureSettingsStore.getFinnhubApiKey() },
             GoogleNewsRssSource(okHttpClient),
+            EdgarSource(edgarApi) { buildEdgarUserAgent(appPreferences.userName, appPreferences.userEmail) },
         ),
     )
 
