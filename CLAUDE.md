@@ -260,7 +260,7 @@ Key tasks: `build` (`./gradlew assembleDebug`, copies the APK to `dist/`),
 `vet` (`./gradlew lint`), `test` (`./gradlew test`), `cov` (Jacoco),
 `all` = build+vet+test, `full` = all+cov+graphify.
 
-`build_apk.sh` (repo root) is a thin convenience wrapper around
+`scripts/build_apk.sh` is a thin convenience wrapper around
 `scripts/dev.sh build` for producing a debug APK to sideload manually —
 it doesn't reimplement the Gradle invocation, so `scripts/dev.sh`
 remains the only place that actually knows how to build this repo.
